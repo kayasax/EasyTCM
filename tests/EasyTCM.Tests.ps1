@@ -26,6 +26,7 @@ Describe 'EasyTCM Module' {
             'Remove-TCMMonitor'
             'Get-TCMDrift'
             'Get-TCMMonitoringResult'
+            'Export-TCMDriftReport'
             'Get-TCMQuota'
             'Sync-TCMDriftToMaester'
         )

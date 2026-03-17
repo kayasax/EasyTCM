@@ -50,6 +50,7 @@
         # Drift
         'Get-TCMDrift'
         'Get-TCMMonitoringResult'
+        'Export-TCMDriftReport'
         # Quota
         'Get-TCMQuota'
         # Maester Bridge

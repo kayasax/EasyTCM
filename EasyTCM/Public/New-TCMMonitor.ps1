@@ -83,7 +83,14 @@ function New-TCMMonitor {
 
         $monitor = Invoke-TCMGraphRequest -Endpoint 'configurationMonitors' -Method POST -Body $body
 
-        Write-Host "Monitor created (Id: $($monitor.id), Status: $($monitor.status))" -ForegroundColor Green
+        if (-not $monitor) {
+            return
+        }
+
+        $monId = if ($monitor -is [System.Collections.IDictionary]) { $monitor['id'] } else { $monitor.id }
+        $monStat = if ($monitor -is [System.Collections.IDictionary]) { $monitor['status'] } else { $monitor.status }
+
+        Write-Host "Monitor created (Id: $monId, Status: $monStat)" -ForegroundColor Green
         Write-Host "  Runs every 6 hours at fixed GMT times: 6 AM, 12 PM, 6 PM, 12 AM" -ForegroundColor DarkGray
         Write-Host "  Use Get-TCMDrift to check for detected drifts." -ForegroundColor DarkGray
 

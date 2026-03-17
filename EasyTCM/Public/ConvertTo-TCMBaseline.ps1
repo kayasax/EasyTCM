@@ -128,20 +128,31 @@ function ConvertTo-TCMBaseline {
             }
 
             # Build a baseline resource from the snapshot data
+            # Truncate top-level displayName to 128 chars (API max)
+            $topDisplayName = $item.displayName ?? "$resourceType instance"
+            if ($topDisplayName.Length -gt 128) {
+                $topDisplayName = $topDisplayName.Substring(0, 128)
+            }
+
             $baselineResource = @{
                 resourceType = $resourceType
-                displayName  = $item.displayName ?? "$resourceType instance"
+                displayName  = $topDisplayName
                 properties   = @{}
             }
 
-            # Copy all configuration properties (exclude metadata)
-            $metadataKeys = @('@odata.type', 'id', 'resourceType', 'displayName', 'description')
+            # Copy all configuration properties
+            # Properties come as either hashtable (from Graph API) or PSCustomObject (from JSON)
             $props = if ($item.properties) { $item.properties } else { $item }
 
-            foreach ($key in $props.Keys) {
-                if ($key -notin $metadataKeys) {
-                    $baselineResource.properties[$key] = $props[$key]
-                }
+            $propEntries = if ($props -is [System.Collections.IDictionary]) {
+                $props.GetEnumerator()
+            }
+            else {
+                $props.PSObject.Properties | ForEach-Object { [PSCustomObject]@{ Key = $_.Name; Value = $_.Value } }
+            }
+
+            foreach ($entry in $propEntries) {
+                $baselineResource.properties[$entry.Key] = $entry.Value
             }
 
             if ($baselineResource.properties.Count -gt 0) {

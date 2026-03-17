@@ -89,7 +89,11 @@ function Sync-TCMDriftToMaester {
     $summaries = [System.Collections.Generic.List[object]]::new()
 
     foreach ($monitor in $monitors) {
-        $monitorName = ($monitor.displayName -replace '[^\w\-]', '_')
+        $monDisplayName = if ($monitor -is [System.Collections.IDictionary]) { $monitor['displayName'] } else { $monitor.displayName }
+        $monId = if ($monitor -is [System.Collections.IDictionary]) { $monitor['id'] } else { $monitor.id }
+        $monBaseline = if ($monitor -is [System.Collections.IDictionary]) { $monitor['baseline'] } else { $monitor.baseline }
+
+        $monitorName = ($monDisplayName -replace '[^\w\-]', '_')
         $suitePath = Join-Path $OutputPath "TCM-$monitorName"
 
         if (-not (Test-Path $suitePath)) {
@@ -98,20 +102,24 @@ function Sync-TCMDriftToMaester {
 
         # Build "baseline" from monitor's baseline
         $baselineData = @{}
-        if ($monitor.baseline -and $monitor.baseline.resources) {
-            foreach ($res in $monitor.baseline.resources) {
-                $key = "$($res.resourceType)|$($res.displayName)"
+        $baselineResources = if ($monBaseline -is [System.Collections.IDictionary]) { $monBaseline['resources'] } elseif ($monBaseline) { $monBaseline.resources } else { $null }
+        if ($baselineResources) {
+            foreach ($res in $baselineResources) {
+                $resType = if ($res -is [System.Collections.IDictionary]) { $res['resourceType'] } else { $res.resourceType }
+                $resDn = if ($res -is [System.Collections.IDictionary]) { $res['displayName'] } else { $res.displayName }
+                $resProps = if ($res -is [System.Collections.IDictionary]) { $res['properties'] } else { $res.properties }
+                $key = "$resType|$resDn"
                 $baselineData[$key] = @{
-                    resourceType = $res.resourceType
-                    displayName  = $res.displayName
-                    properties   = $res.properties
+                    resourceType = $resType
+                    displayName  = $resDn
+                    properties   = $resProps
                 }
             }
         }
 
         # Build "current" by applying drift deltas to baseline
         $currentData = $baselineData.Clone()
-        $monitorDrifts = @($drifts | Where-Object { $_.MonitorId -eq $monitor.id })
+        $monitorDrifts = @($drifts | Where-Object { $_.MonitorId -eq $monId })
 
         foreach ($drift in $monitorDrifts) {
             $key = "$($drift.ResourceType)|$($drift.ResourceDisplay)"
@@ -153,8 +161,8 @@ function Sync-TCMDriftToMaester {
         } | ConvertTo-Json | Set-Content -Path $settingsFile -Encoding utf8
 
         $summary = [PSCustomObject]@{
-            MonitorName   = $monitor.displayName
-            MonitorId     = $monitor.id
+            MonitorName   = $monDisplayName
+            MonitorId     = $monId
             SuitePath     = $suitePath
             BaselineFile  = $baselineFile
             CurrentFile   = $currentFile
@@ -165,7 +173,7 @@ function Sync-TCMDriftToMaester {
         $summaries.Add($summary)
 
         $driftIcon = if ($monitorDrifts.Count -gt 0) { '⚠️' } else { '✅' }
-        Write-Host "  $driftIcon $($monitor.displayName): $($monitorDrifts.Count) drifts across $($baselineData.Count) resources" -ForegroundColor $(if ($monitorDrifts.Count -gt 0) { 'Yellow' } else { 'Green' })
+        Write-Host "  $driftIcon $monDisplayName`: $($monitorDrifts.Count) drifts across $($baselineData.Count) resources" -ForegroundColor $(if ($monitorDrifts.Count -gt 0) { 'Yellow' } else { 'Green' })
     }
 
     # Summary

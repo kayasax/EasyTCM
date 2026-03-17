@@ -128,21 +128,24 @@ function ConvertTo-TCMBaseline {
             }
 
             # Build a baseline resource from the snapshot data
-            # Truncate top-level displayName to 128 chars (API max)
-            $topDisplayName = $item.displayName ?? "$resourceType instance"
+            # The monitor API requires PascalCase keys (DisplayName, ResourceType, Properties)
+            # — different from the camelCase used in snapshot responses.
+            $topDisplayName = if ($item -is [System.Collections.IDictionary]) { $item['displayName'] } else { $item.displayName }
+            if (-not $topDisplayName) { $topDisplayName = "$resourceType instance" }
             if ($topDisplayName.Length -gt 128) {
                 $topDisplayName = $topDisplayName.Substring(0, 128)
             }
 
             $baselineResource = @{
-                resourceType = $resourceType
-                displayName  = $topDisplayName
-                properties   = @{}
+                ResourceType = $resourceType
+                DisplayName  = $topDisplayName
+                Properties   = @{}
             }
 
             # Copy all configuration properties
             # Properties come as either hashtable (from Graph API) or PSCustomObject (from JSON)
-            $props = if ($item.properties) { $item.properties } else { $item }
+            $props = if ($item -is [System.Collections.IDictionary]) { $item['properties'] } else { $item.properties }
+            if (-not $props) { $props = $item }
 
             $propEntries = if ($props -is [System.Collections.IDictionary]) {
                 $props.GetEnumerator()
@@ -152,10 +155,10 @@ function ConvertTo-TCMBaseline {
             }
 
             foreach ($entry in $propEntries) {
-                $baselineResource.properties[$entry.Key] = $entry.Value
+                $baselineResource.Properties[$entry.Key] = $entry.Value
             }
 
-            if ($baselineResource.properties.Count -gt 0) {
+            if ($baselineResource.Properties.Count -gt 0) {
                 $baselineResources.Add($baselineResource)
             }
         }
@@ -179,10 +182,10 @@ function ConvertTo-TCMBaseline {
         }
 
         $baseline = @{
-            displayName = $DisplayName
-            resources   = $baselineResources
+            DisplayName = $DisplayName
+            Resources   = $baselineResources
         }
-        if ($Description) { $baseline.description = $Description }
+        if ($Description) { $baseline.Description = $Description }
 
         $baseline
     }

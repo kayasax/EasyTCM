@@ -44,11 +44,13 @@ function New-TCMMonitor {
             $Baseline = Get-Content $BaselinePath -Raw | ConvertFrom-Json -AsHashtable
         }
 
-        if (-not $Baseline -or -not $Baseline.resources) {
+        if (-not $Baseline -or (-not $Baseline.resources -and -not $Baseline.Resources)) {
             throw 'A baseline with at least one resource is required. Use ConvertTo-TCMBaseline or provide a JSON file.'
         }
 
-        $resourceCount = $Baseline.resources.Count
+        # Support both camelCase and PascalCase resource keys
+        $resources = if ($Baseline.Resources) { $Baseline.Resources } else { $Baseline.resources }
+        $resourceCount = @($resources).Count
         Write-Host "Creating monitor '$DisplayName' with $resourceCount resources..." -ForegroundColor Cyan
 
         # Quota impact: show this monitor's cost + existing monitors

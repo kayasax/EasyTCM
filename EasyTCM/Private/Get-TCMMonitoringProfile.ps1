@@ -1,0 +1,87 @@
+function Get-TCMMonitoringProfile {
+    <#
+    .SYNOPSIS
+        Returns curated sets of resource types to monitor, ranked by security impact.
+    .DESCRIPTION
+        TCM's 800 resources/day quota (÷ 4 runs = 200 instances max) makes it
+        critical to monitor only what matters. These profiles prioritize resources
+        by security impact so users don't waste quota on low-value config.
+
+        Profiles:
+        - SecurityCritical: ~15 types — identity, access control, mail security
+        - Recommended:      ~30 types — SecurityCritical + compliance & device policies
+        - Full:             ~52 types — everything (likely to exceed quota)
+    #>
+    [CmdletBinding()]
+    param()
+
+    @{
+        # The configs that, if changed, create immediate security exposure.
+        # Estimated: ~15 types, covers 80% of real-world attack surface.
+        SecurityCritical = @(
+            # Entra — identity is the new perimeter
+            'microsoft.entra.conditionalaccesspolicy'
+            'microsoft.entra.authenticationmethodpolicy'
+            'microsoft.entra.securitydefaultspolicy'
+            'microsoft.entra.authorizationpolicy'
+            'microsoft.entra.crosstenantaccesspolicy'
+            'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'
+            'microsoft.entra.namedlocationpolicy'
+            # Exchange — mail is the #1 attack vector
+            'microsoft.exchange.antiphishpolicy'
+            'microsoft.exchange.antiphishrule'
+            'microsoft.exchange.transportrule'
+            'microsoft.exchange.dkimsigningconfig'
+            'microsoft.exchange.hostedcontentfilterpolicy'
+            'microsoft.exchange.safeattachmentpolicy'
+            'microsoft.exchange.safelinkspolicy'
+            # Teams — federation = external access
+            'microsoft.teams.federationconfiguration'
+            # Defender
+            'microsoft.defender.safeattachmentpolicy'
+            'microsoft.defender.safelinkspolicy'
+        )
+
+        # SecurityCritical + compliance, role management, device policies.
+        # Estimated: ~30 types, good balance of coverage vs quota.
+        Recommended = @(
+            # All of SecurityCritical
+            'microsoft.entra.conditionalaccesspolicy'
+            'microsoft.entra.authenticationmethodpolicy'
+            'microsoft.entra.securitydefaultspolicy'
+            'microsoft.entra.authorizationpolicy'
+            'microsoft.entra.crosstenantaccesspolicy'
+            'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'
+            'microsoft.entra.namedlocationpolicy'
+            'microsoft.exchange.antiphishpolicy'
+            'microsoft.exchange.antiphishrule'
+            'microsoft.exchange.transportrule'
+            'microsoft.exchange.dkimsigningconfig'
+            'microsoft.exchange.hostedcontentfilterpolicy'
+            'microsoft.exchange.safeattachmentpolicy'
+            'microsoft.exchange.safelinkspolicy'
+            'microsoft.teams.federationconfiguration'
+            'microsoft.defender.safeattachmentpolicy'
+            'microsoft.defender.safelinkspolicy'
+            # + Role management
+            'microsoft.entra.roledefinition'
+            'microsoft.entra.rolemanagementpolicy'
+            # + Exchange org & connectors
+            'microsoft.exchange.organizationconfig'
+            'microsoft.exchange.inboundconnector'
+            'microsoft.exchange.outboundconnector'
+            'microsoft.exchange.hostedoutboundspamfilterpolicy'
+            # + Teams policies
+            'microsoft.teams.meetingpolicy'
+            'microsoft.teams.messagingpolicy'
+            'microsoft.teams.apppermissionpolicy'
+            # + Intune device compliance
+            'microsoft.intune.devicecompliancepolicy'
+            'microsoft.intune.deviceconfigurationpolicy'
+            # + Purview core
+            'microsoft.purview.sensitivitylabel'
+            'microsoft.purview.labelpolicy'
+            'microsoft.purview.retentioncompliancepolicy'
+        )
+    }
+}

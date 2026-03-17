@@ -72,33 +72,31 @@ Describe 'ConvertTo-TCMBaseline' {
         $mockSnapshot = @{
             resources = @(
                 @{
-                    resourceType = 'microsoft.exchange.accepteddomain'
-                    displayName  = 'contoso.com'
+                    resourceType = 'microsoft.entra.conditionalaccesspolicy'
+                    displayName  = 'Block Legacy Auth'
                     properties   = @{
-                        Identity   = 'contoso.com'
-                        DomainType = 'Authoritative'
-                        Ensure     = 'Present'
+                        State     = 'enabled'
+                        GrantType = 'block'
                     }
                 }
             )
         }
 
-        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -DisplayName 'Test Baseline'
+        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -DisplayName 'Test Baseline' -Profile Full
 
         $baseline | Should -Not -BeNullOrEmpty
         $baseline.displayName | Should -Be 'Test Baseline'
         $baseline.resources | Should -HaveCount 1
-        $baseline.resources[0].resourceType | Should -Be 'microsoft.exchange.accepteddomain'
-        $baseline.resources[0].properties.Identity | Should -Be 'contoso.com'
+        $baseline.resources[0].resourceType | Should -Be 'microsoft.entra.conditionalaccesspolicy'
     }
 
     It 'should exclude specified resource types' {
         $mockSnapshot = @{
             resources = @(
                 @{
-                    resourceType = 'microsoft.exchange.accepteddomain'
-                    displayName  = 'contoso.com'
-                    properties   = @{ Identity = 'contoso.com'; Ensure = 'Present' }
+                    resourceType = 'microsoft.entra.conditionalaccesspolicy'
+                    displayName  = 'Block Legacy Auth'
+                    properties   = @{ State = 'enabled' }
                 }
                 @{
                     resourceType = 'microsoft.exchange.transportrule'
@@ -108,10 +106,48 @@ Describe 'ConvertTo-TCMBaseline' {
             )
         }
 
-        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -ExcludeResources 'microsoft.exchange.transportrule'
+        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -Profile Full -ExcludeResources 'microsoft.exchange.transportrule'
 
         $baseline.resources | Should -HaveCount 1
-        $baseline.resources[0].resourceType | Should -Be 'microsoft.exchange.accepteddomain'
+        $baseline.resources[0].resourceType | Should -Be 'microsoft.entra.conditionalaccesspolicy'
+    }
+
+    It 'should filter by SecurityCritical profile by default' {
+        $mockSnapshot = @{
+            resources = @(
+                @{
+                    resourceType = 'microsoft.entra.conditionalaccesspolicy'
+                    displayName  = 'Block Legacy Auth'
+                    properties   = @{ State = 'enabled' }
+                }
+                @{
+                    resourceType = 'microsoft.entra.administrativeunit'
+                    displayName  = 'Marketing AU'
+                    properties   = @{ displayName = 'Marketing AU' }
+                }
+            )
+        }
+
+        # Default profile is SecurityCritical — administrative units NOT included
+        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot
+
+        $baseline.resources | Should -HaveCount 1
+        $baseline.resources[0].resourceType | Should -Be 'microsoft.entra.conditionalaccesspolicy'
+    }
+}
+
+Describe 'Get-TCMMonitoringProfile' {
+    It 'should return SecurityCritical and Recommended profiles' {
+        $profiles = & (Get-Module EasyTCM) { Get-TCMMonitoringProfile }
+        $profiles.Keys | Should -Contain 'SecurityCritical'
+        $profiles.Keys | Should -Contain 'Recommended'
+    }
+
+    It 'should have SecurityCritical as a subset of Recommended' {
+        $profiles = & (Get-Module EasyTCM) { Get-TCMMonitoringProfile }
+        foreach ($type in $profiles.SecurityCritical) {
+            $profiles.Recommended | Should -Contain $type
+        }
     }
 }
 

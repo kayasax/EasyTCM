@@ -27,7 +27,7 @@ Microsoft's [Tenant Configuration Management (TCM)](https://learn.microsoft.com/
 | 🔧 Complex service principal setup with dual auth layers | `Initialize-TCM` — one command to set up everything |
 | 📝 Hand-crafting JSON baselines from 100s of resource types | `ConvertTo-TCMBaseline` — snapshot your current config, convert to baseline |
 | 📊 No reporting — raw JSON drifts in Graph API | `Export-TCMDriftReport` — HTML reports with remediation links |
-| 🔢 Easy to blow API quotas (800 resources/day, 20k/month) | `Get-TCMQuota` — real-time quota dashboard |
+| 🔢 Easy to blow API quotas (800 resources/day, 20k/month) | `Get-TCMQuota` + monitoring profiles (`-Profile SecurityCritical`) — monitor what matters, not everything |
 | 🔗 No integration with community security tools | `Sync-TCMDriftToMaester` — bridge to Maester test framework |
 
 ---
@@ -36,7 +36,7 @@ Microsoft's [Tenant Configuration Management (TCM)](https://learn.microsoft.com/
 
 - **Snap → Monitor → Report** — The simplest path from zero to continuous tenant monitoring
 - **Snapshot-to-Baseline Converter** — Nobody else does this. Take your current config as the known-good state and start monitoring in seconds
-- **Quota-Aware** — Built-in tracking of TCM's strict API limits so you never hit a wall
+- **Quota-Aware** — Built-in profiles (SecurityCritical, Recommended, Full) + real-time quota dashboard. Never waste quota on configs that don't matter
 - **Security-Standard Templates** — Pre-built baselines aligned to CIS Benchmarks and CISA SCuBA
 - **Maester Bridge** — Use TCM's server-side monitoring as Maester's drift detection backend
 - **Multi-Tenant Ready** — Compare configurations across tenants for MSPs and large enterprises
@@ -127,7 +127,7 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 | `New-TCMSnapshot` | Create a snapshot job with workload shortcuts and optional `-Wait` |
 | `Get-TCMSnapshot` | Retrieve snapshot jobs with optional `-IncludeContent` |
 | `Remove-TCMSnapshot` | Delete a snapshot job |
-| `ConvertTo-TCMBaseline` | ⭐ **Convert a snapshot into a monitor baseline** — the key innovation |
+| `ConvertTo-TCMBaseline` | ⭐ **Snapshot → baseline with smart profiles** — SecurityCritical (default), Recommended, or Full |
 
 ### Monitors
 
@@ -180,19 +180,42 @@ Full resource type list: [TCM Schema Store](https://json.schemastore.org/utcm-mo
 
 ---
 
-## ⚠️ TCM API Limits (Why Quota Management Matters)
+## ⚠️ TCM Quota Reality (Why Profiles Matter)
 
-| Resource | Limit |
-|---|---|
-| Monitors per tenant | 30 |
-| Monitor frequency | Fixed every 6 hours |
-| Monitored resources/day | 800 across all monitors |
-| Snapshot resources/month | 20,000 cumulative |
-| Visible snapshot jobs | 12 |
-| Snapshot retention | 7 days |
-| Resolved drift retention | 30 days |
+| Resource | Limit | What it means |
+|---|---|---|
+| Monitors per tenant | 30 | Plenty — not the bottleneck |
+| Monitor frequency | Fixed every 6 hours | 4 runs/day per monitor, non-negotiable |
+| **Monitored resources/day** | **800 across all monitors** | **THE bottleneck — 800 ÷ 4 = 200 instances max** |
+| Snapshot resources/month | 20,000 cumulative | Generous — snapshot freely |
+| Visible snapshot jobs | 12 | Clean up old snapshots periodically |
+| Snapshot retention | 7 days | — |
+| Resolved drift retention | 30 days | — |
 
-EasyTCM's `Get-TCMQuota` tracks all of these in real-time so you can plan monitors effectively.
+### The math that matters
+
+A typical tenant has 300-500 resource instances across all workloads. Monitoring everything uses 1200-2000 resources/day — **instant quota death**.
+
+**EasyTCM's solution: monitoring profiles in `ConvertTo-TCMBaseline`**
+
+| Profile | Types | Daily cost (typical) | Use case |
+|---|---|---|---|
+| `SecurityCritical` (default) | ~16 | ~80-120/day | CA policies, auth methods, mail security, federation |
+| `Recommended` | ~30 | ~200-400/day | Above + roles, compliance, device policies |
+| `Full` | ~52 | 400-2000+/day | ⚠️ Will likely exceed quota |
+
+```powershell
+# Default — quota-safe, covers 80% of attack surface
+$baseline = $snapshot | ConvertTo-TCMBaseline
+
+# Broader coverage — check your quota first
+$baseline = $snapshot | ConvertTo-TCMBaseline -Profile Recommended
+
+# Everything — only if you have very few resource instances
+$baseline = $snapshot | ConvertTo-TCMBaseline -Profile Full
+```
+
+`Get-TCMQuota` tracks all limits in real-time. `New-TCMMonitor` warns before creating a monitor that would exceed quota.
 
 ---
 

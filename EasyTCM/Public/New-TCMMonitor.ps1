@@ -51,9 +51,28 @@ function New-TCMMonitor {
         $resourceCount = $Baseline.resources.Count
         Write-Host "Creating monitor '$DisplayName' with $resourceCount resources..." -ForegroundColor Cyan
 
-        # Quota check: 800 resources/day across all monitors, each runs 4x/day
+        # Quota impact: show this monitor's cost + existing monitors
         $dailyCost = $resourceCount * 4
-        Write-Host "  Daily resource usage: $dailyCost / 800 quota" -ForegroundColor DarkGray
+        $existingMonitors = @()
+        try { $existingMonitors = @(Get-TCMMonitor) } catch { }
+        $existingDailyCost = ($existingMonitors | ForEach-Object {
+            # Estimate: we don't always know resource count, but count what we can
+            if ($_.baseline -and $_.baseline.resources) { $_.baseline.resources.Count * 4 }
+        } | Measure-Object -Sum).Sum
+
+        $totalDaily = $existingDailyCost + $dailyCost
+        $quotaPercent = [math]::Round(($totalDaily / 800) * 100, 1)
+        $color = if ($quotaPercent -gt 80) { 'Red' } elseif ($quotaPercent -gt 50) { 'Yellow' } else { 'Green' }
+
+        Write-Host "  This monitor: $dailyCost resources/day" -ForegroundColor DarkGray
+        Write-Host "  Total after creation: ~$totalDaily / 800 daily quota ($quotaPercent%)" -ForegroundColor $color
+
+        if ($quotaPercent -gt 100) {
+            Write-Warning "OVER QUOTA! Total monitored resources ($totalDaily/day) exceeds the 800/day limit. TCM will throttle or fail. Use ConvertTo-TCMBaseline -Profile SecurityCritical to reduce."
+        }
+        elseif ($quotaPercent -gt 80) {
+            Write-Warning "Nearing quota limit ($quotaPercent%). Consider using ConvertTo-TCMBaseline -Profile SecurityCritical."
+        }
 
         $body = @{
             displayName = $DisplayName

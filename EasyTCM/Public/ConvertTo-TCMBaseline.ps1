@@ -7,25 +7,48 @@ function ConvertTo-TCMBaseline {
         format expected by New-TCMMonitor. This is the bridge between "what is my
         current config" and "monitor it for drift".
 
+        QUOTA REALITY: TCM allows 800 monitored resources/day across all monitors.
+        Each monitor runs 4×/day (every 6h), so you can monitor ~200 resource
+        instances total. Monitoring everything WILL blow your quota.
+
+        Use -Profile to filter to what matters:
+        - SecurityCritical  (~15 types) — CA policies, auth methods, mail security, federation
+        - Recommended       (~30 types) — above + roles, compliance, device policies
+        - Full              (all types) — everything from the snapshot (quota warning)
+
+        Default is SecurityCritical — because monitoring 15 critical configs that
+        actually alert you is better than monitoring 200 that blow your quota silently.
+
         Workflow:
-        1. New-TCMSnapshot -Wait   → get current config
-        2. ConvertTo-TCMBaseline   → turn it into a baseline
-        3. New-TCMMonitor          → start monitoring
+        1. New-TCMSnapshot -Wait       → snapshot everything (cheap)
+        2. ConvertTo-TCMBaseline       → filter to security-critical (smart)
+        3. New-TCMMonitor              → monitor only what matters (quota-safe)
     .PARAMETER SnapshotContent
         The snapshot content object (from Get-TCMSnapshot -IncludeContent).
     .PARAMETER SnapshotId
         Alternatively, provide a snapshot job ID and the content will be fetched.
+    .PARAMETER Profile
+        Monitoring profile that filters resource types by security impact.
+        - SecurityCritical: Identity + mail security + federation (~15 types, default)
+        - Recommended: Above + roles, compliance, devices (~30 types)
+        - Full: All resource types from the snapshot (watch your quota!)
     .PARAMETER DisplayName
         Name for the generated baseline. Defaults to "Baseline from snapshot".
     .PARAMETER Description
         Optional description for the baseline.
     .PARAMETER ExcludeResources
-        Resource type names to exclude from the baseline.
+        Resource type names to exclude from the baseline (applied after profile filter).
     .EXAMPLE
-        $snapshot = New-TCMSnapshot -DisplayName "Current" -Workloads Entra -Wait
-        $snapshot | ConvertTo-TCMBaseline | New-TCMMonitor -Name "Entra Monitor"
+        # Default: security-critical resources only (quota-safe)
+        New-TCMSnapshot -DisplayName "Baseline" -Wait | ConvertTo-TCMBaseline
+
     .EXAMPLE
-        ConvertTo-TCMBaseline -SnapshotId 'c91a1470-...' -ExcludeResources 'microsoft.entra.administrativeunit'
+        # Broader coverage
+        ConvertTo-TCMBaseline -SnapshotId $id -Profile Recommended
+
+    .EXAMPLE
+        # Everything (check your quota first with Get-TCMQuota)
+        ConvertTo-TCMBaseline -SnapshotId $id -Profile Full
     #>
     [CmdletBinding()]
     param(
@@ -34,6 +57,9 @@ function ConvertTo-TCMBaseline {
 
         [Parameter(ParameterSetName = 'Id')]
         [string]$SnapshotId,
+
+        [ValidateSet('SecurityCritical', 'Recommended', 'Full')]
+        [string]$Profile = 'SecurityCritical',
 
         [string]$DisplayName = 'Baseline from snapshot',
 
@@ -56,6 +82,17 @@ function ConvertTo-TCMBaseline {
             throw 'No snapshot content provided. Use -SnapshotId or pipe a snapshot with content.'
         }
 
+        # Resolve profile filter
+        $profileFilter = $null
+        if ($Profile -ne 'Full') {
+            $profiles = Get-TCMMonitoringProfile
+            $profileFilter = $profiles[$Profile]
+            Write-Host "Profile '$Profile': filtering to $($profileFilter.Count) resource types" -ForegroundColor Cyan
+        }
+        else {
+            Write-Warning "Profile 'Full' selected — includes ALL resource types. Check quota with Get-TCMQuota!"
+        }
+
         # The snapshot content contains resource instances grouped by type.
         # We need to transform each into a baseline resource entry.
         $baselineResources = [System.Collections.Generic.List[object]]::new()
@@ -75,8 +112,15 @@ function ConvertTo-TCMBaseline {
             @($SnapshotContent)
         }
 
+        $skippedTypes = @{}
         foreach ($item in $items) {
             $resourceType = $item.resourceType
+
+            # Profile filter — skip types not in the selected profile
+            if ($profileFilter -and $resourceType -notin $profileFilter) {
+                $skippedTypes[$resourceType] = ($skippedTypes[$resourceType] ?? 0) + 1
+                continue
+            }
 
             if ($ExcludeResources -and $resourceType -in $ExcludeResources) {
                 Write-Verbose "Excluding resource type: $resourceType"
@@ -106,6 +150,22 @@ function ConvertTo-TCMBaseline {
         }
 
         Write-Host "Converted $($baselineResources.Count) resources into baseline." -ForegroundColor Cyan
+
+        # Quota impact summary
+        $dailyCost = $baselineResources.Count * 4
+        $quotaPercent = [math]::Round(($dailyCost / 800) * 100, 1)
+        $color = if ($quotaPercent -gt 80) { 'Red' } elseif ($quotaPercent -gt 50) { 'Yellow' } else { 'Green' }
+        Write-Host "  Quota impact: $dailyCost / 800 resources per day ($quotaPercent%)" -ForegroundColor $color
+
+        if ($skippedTypes.Count -gt 0) {
+            $skippedTotal = ($skippedTypes.Values | Measure-Object -Sum).Sum
+            Write-Host "  Filtered out: $skippedTotal instances across $($skippedTypes.Count) resource types (not in '$Profile' profile)" -ForegroundColor DarkGray
+            Write-Verbose "Skipped types: $($skippedTypes.Keys -join ', ')"
+        }
+
+        if ($quotaPercent -gt 80) {
+            Write-Warning "This baseline alone uses $quotaPercent% of daily quota. Consider using -Profile SecurityCritical or -ExcludeResources to reduce."
+        }
 
         $baseline = @{
             displayName = $DisplayName

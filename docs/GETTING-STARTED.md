@@ -77,16 +77,28 @@ $snapshot = New-TCMSnapshot -DisplayName "My first snapshot" -Wait
 
 ## Step 5: Convert Snapshot to Baseline (The Magic Step)
 
-This is what makes EasyTCM unique — take your **current** config and use it as the **desired** state:
+This is what makes EasyTCM unique — take your **current** config and filter it to **what actually matters** for security:
 
 ```powershell
-# Download the snapshot content and convert to baseline
+# Default: SecurityCritical profile — CA policies, auth methods, mail security, federation
+# This is quota-safe (~80-120 resources/day out of 800 limit)
 $snapshotWithContent = Get-TCMSnapshot -Id $snapshot.id -IncludeContent
 $baseline = ConvertTo-TCMBaseline -SnapshotContent $snapshotWithContent.snapshotContent
 
 # Output:
-# Converted 42 resources into baseline.
+# Profile 'SecurityCritical': filtering to 16 resource types
+# Converted 23 resources into baseline.
+#   Quota impact: 92 / 800 resources per day (11.5%)
+#   Filtered out: 187 instances across 36 resource types (not in 'SecurityCritical' profile)
 ```
+
+> **Why SecurityCritical is the default:** TCM's 800 resources/day limit means you can
+> realistically monitor ~200 instances. SecurityCritical covers Conditional Access, auth
+> methods, mail security, and federation — the configs where drift = breach. That's 80%
+> of the attack surface in ~15% of the quota.
+>
+> Use `-Profile Recommended` for broader coverage, or `-Profile Full` if your tenant has
+> very few resource instances.
 
 ## Step 6: Create a Monitor
 

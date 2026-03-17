@@ -1,0 +1,251 @@
+<p align="center">
+  <h1 align="center">🛡️ EasyTCM</h1>
+  <p align="center">
+    <strong>Simplify Microsoft 365 Tenant Configuration Management</strong>
+  </p>
+  <p align="center">
+    The <a href="https://github.com/kayasax/EasyPIM">EasyPIM</a> approach — applied to Microsoft's new <a href="https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview">Tenant Configuration Management (TCM) APIs</a>.
+  </p>
+  <p align="center">
+    <a href="https://www.powershellgallery.com/packages/EasyTCM"><img src="https://img.shields.io/powershellgallery/v/EasyTCM?label=PSGallery&logo=powershell&color=blue" alt="PSGallery Version"></a>
+    <a href="https://www.powershellgallery.com/packages/EasyTCM"><img src="https://img.shields.io/powershellgallery/dt/EasyTCM?label=Downloads&color=green" alt="PSGallery Downloads"></a>
+    <a href="https://github.com/kayasax/UTCM/stargazers"><img src="https://img.shields.io/github/stars/kayasax/UTCM?style=social" alt="GitHub Stars"></a>
+    <a href="https://github.com/kayasax/UTCM/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kayasax/UTCM" alt="License"></a>
+  </p>
+</p>
+
+---
+
+## 💡 Why EasyTCM?
+
+Microsoft's [Tenant Configuration Management (TCM)](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) APIs (public preview) let you **monitor configuration drift** and **snapshot tenant settings** across 6 workloads — but the raw Graph beta API is complex, requires multi-layer authentication, and offers no built-in reporting or remediation.
+
+**EasyTCM** transforms that complexity into simple PowerShell cmdlets:
+
+| Pain Point | EasyTCM Solution |
+|---|---|
+| 🔧 Complex service principal setup with dual auth layers | `Initialize-TCM` — one command to set up everything |
+| 📝 Hand-crafting JSON baselines from 100s of resource types | `ConvertTo-TCMBaseline` — snapshot your current config, convert to baseline |
+| 📊 No reporting — raw JSON drifts in Graph API | `Export-TCMDriftReport` — HTML reports with remediation links |
+| 🔢 Easy to blow API quotas (800 resources/day, 20k/month) | `Get-TCMQuota` — real-time quota dashboard |
+| 🔗 No integration with community security tools | `Sync-TCMDriftToMaester` — bridge to Maester test framework |
+
+---
+
+## 🎯 What Makes EasyTCM Different
+
+- **Snap → Monitor → Report** — The simplest path from zero to continuous tenant monitoring
+- **Snapshot-to-Baseline Converter** — Nobody else does this. Take your current config as the known-good state and start monitoring in seconds
+- **Quota-Aware** — Built-in tracking of TCM's strict API limits so you never hit a wall
+- **Security-Standard Templates** — Pre-built baselines aligned to CIS Benchmarks and CISA SCuBA
+- **Maester Bridge** — Use TCM's server-side monitoring as Maester's drift detection backend
+- **Multi-Tenant Ready** — Compare configurations across tenants for MSPs and large enterprises
+
+---
+
+## 🚀 Quick Start
+
+```powershell
+# 1. Install
+Install-Module -Name EasyTCM -Scope CurrentUser
+
+# 2. Connect to Microsoft Graph
+Connect-MgGraph -Scopes 'ConfigurationMonitoring.ReadWrite.All'
+
+# 3. One-time setup: register TCM service principal & grant permissions
+Initialize-TCM -TenantId $tenantId -Workloads Entra, Exchange, Teams
+
+# 4. Snapshot your current tenant configuration
+$snapshot = New-TCMSnapshot -Workloads Entra, Exchange
+
+# 5. Convert snapshot to baseline (the magic step)
+$baseline = $snapshot | ConvertTo-TCMBaseline
+
+# 6. Create a monitor — TCM will check every 6 hours
+New-TCMMonitor -Name "Production Baseline" -Baseline $baseline
+
+# 7. Check for drifts
+Get-TCMDrift | Format-Table Workload, ResourceType, Property, Expected, Actual
+
+# 8. Generate a report
+Export-TCMDriftReport -OutputPath "./drift-report.html"
+```
+
+---
+
+## 📦 Installation
+
+### From PowerShell Gallery (Recommended)
+
+```powershell
+Install-Module -Name EasyTCM -Scope CurrentUser -Force
+```
+
+### From Source
+
+```powershell
+git clone https://github.com/kayasax/UTCM.git
+Import-Module ./UTCM/EasyTCM/EasyTCM.psd1
+```
+
+### Requirements
+
+| Requirement | Details |
+|---|---|
+| PowerShell | 5.1+ (Windows) or 7.0+ (Cross-platform) |
+| Modules | `Microsoft.Graph.Authentication` (auto-installed) |
+| Permissions | `ConfigurationMonitoring.ReadWrite.All` or privileged Entra role |
+| Tenant | TCM service principal registered (handled by `Initialize-TCM`) |
+
+---
+
+## 🎯 Core Cmdlets
+
+### Setup & Authentication
+
+| Cmdlet | Description |
+|---|---|
+| `Initialize-TCM` | Register TCM service principal, grant workload permissions, validate setup |
+| `Test-TCMConnection` | Verify authentication and TCM readiness |
+
+### Snapshots
+
+| Cmdlet | Description |
+|---|---|
+| `New-TCMSnapshot` | Create a snapshot job for one or more workloads |
+| `Get-TCMSnapshot` | Retrieve snapshot results |
+| `Remove-TCMSnapshot` | Delete a snapshot job |
+| `ConvertTo-TCMBaseline` | **Convert a snapshot into a monitor baseline** |
+
+### Monitors
+
+| Cmdlet | Description |
+|---|---|
+| `New-TCMMonitor` | Create a configuration monitor with a baseline |
+| `Get-TCMMonitor` | List and retrieve monitor details |
+| `Update-TCMMonitor` | Update a monitor's baseline (⚠️ deletes existing drifts) |
+| `Remove-TCMMonitor` | Delete a monitor |
+
+### Drift Detection
+
+| Cmdlet | Description |
+|---|---|
+| `Get-TCMDrift` | Retrieve active configuration drifts |
+| `Get-TCMMonitoringResult` | Get detailed monitoring results per cycle |
+| `Export-TCMDriftReport` | Generate HTML/PDF drift report with remediation guidance |
+| `Repair-TCMDrift` | Generate remediation scripts from detected drifts |
+
+### Operations & Quota
+
+| Cmdlet | Description |
+|---|---|
+| `Get-TCMQuota` | Dashboard showing resource/monitor/snapshot quota usage |
+| `Get-TCMWorkload` | List supported workloads and their resource types |
+
+### Ecosystem Integration
+
+| Cmdlet | Description |
+|---|---|
+| `Sync-TCMDriftToMaester` | Convert TCM drifts to Maester test results |
+| `Compare-TCMTenant` | Compare configurations across two tenants |
+| `New-TCMMonitor -Template` | Create monitor from CIS/CISA baseline templates |
+
+---
+
+## 📊 TCM Workload Coverage
+
+EasyTCM wraps TCM's full workload support:
+
+| Workload | Examples |
+|---|---|
+| **Microsoft Entra** | Conditional Access policies, Administrative Units, Auth Methods, Cross-tenant Access, Named Locations |
+| **Microsoft Exchange** | Transport Rules, Accepted Domains, Anti-phishing, Anti-spam, DKIM, Connectors, Mailbox settings |
+| **Microsoft Intune** | Device Compliance, Configuration Profiles, App Protection, Endpoint Security |
+| **Microsoft Teams** | Meeting Policies, Messaging Policies, Federation, App Permission Policies |
+| **Microsoft Defender** | Safe Attachments, Safe Links, Anti-phishing policies |
+| **Microsoft Purview** | Sensitivity Labels, Retention Policies, DLP Policies, Compliance Policies |
+
+Full resource type list: [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json)
+
+---
+
+## ⚠️ TCM API Limits (Why Quota Management Matters)
+
+| Resource | Limit |
+|---|---|
+| Monitors per tenant | 30 |
+| Monitor frequency | Fixed every 6 hours |
+| Monitored resources/day | 800 across all monitors |
+| Snapshot resources/month | 20,000 cumulative |
+| Visible snapshot jobs | 12 |
+| Snapshot retention | 7 days |
+| Resolved drift retention | 30 days |
+
+EasyTCM's `Get-TCMQuota` tracks all of these in real-time so you can plan monitors effectively.
+
+---
+
+## 🏗️ Project Roadmap
+
+### Phase 1 — Foundation (Current) 🏗️
+- [ ] PowerShell module scaffold
+- [ ] `Initialize-TCM` (setup automation)
+- [ ] Snapshot cmdlets (`New-TCMSnapshot`, `Get-TCMSnapshot`)
+- [ ] Monitor cmdlets (`New-TCMMonitor`, `Get-TCMMonitor`, `Get-TCMDrift`)
+- [ ] **Snapshot-to-Baseline converter** (`ConvertTo-TCMBaseline`)
+
+### Phase 2 — Reporting & UX
+- [ ] HTML drift reports with admin portal deep links
+- [ ] Quota dashboard (`Get-TCMQuota`)
+- [ ] Teams adaptive card notifications
+- [ ] Pester test suite
+
+### Phase 3 — Ecosystem
+- [ ] CIS Microsoft 365 Benchmark baseline templates
+- [ ] CISA SCuBA baseline templates
+- [ ] Maester bridge (`Sync-TCMDriftToMaester`)
+- [ ] CI/CD integration (GitHub Actions, Azure DevOps)
+
+### Phase 4 — Advanced
+- [ ] Remediation script generation (`Repair-TCMDrift`)
+- [ ] Multi-tenant comparison (`Compare-TCMTenant`)
+- [ ] Multi-cloud support (GCC, China, Germany)
+- [ ] PSGallery publication
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+```powershell
+# Clone and load for development
+git clone https://github.com/kayasax/UTCM.git
+cd UTCM
+Import-Module ./EasyTCM/EasyTCM.psd1
+Invoke-Pester ./tests/
+```
+
+---
+
+## 📚 Resources
+
+- [TCM Concept Overview](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) — Microsoft's official TCM documentation
+- [TCM API Reference (beta)](https://learn.microsoft.com/en-us/graph/api/resources/unified-tenant-configuration-management-api-overview?view=graph-rest-beta) — Graph API reference
+- [TCM Authentication Setup](https://learn.microsoft.com/en-us/graph/utcm-authentication-setup) — Service principal and permission configuration
+- [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json) — Complete resource type schemas
+- [EasyPIM](https://github.com/kayasax/EasyPIM) — Sister project for PIM management
+- [Maester](https://maester.dev/) — Microsoft 365 security test automation framework
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+
+---
+
+<p align="center">
+  Built with ❤️ for the Microsoft 365 Administrator Community<br>
+  <strong>By the creator of <a href="https://github.com/kayasax/EasyPIM">EasyPIM</a></strong>
+</p>

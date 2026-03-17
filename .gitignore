@@ -1,0 +1,30 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# PowerShell
+*.psm1.bak
+
+# IDE
+.vscode/settings.json
+.idea/
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Build outputs
+output/
+publish/
+
+# Test results
+TestResults/
+*.xml
+
+# Session memory (AI tools)
+.memories/
+
+# Environment files
+.env
+.env.local

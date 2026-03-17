@@ -72,9 +72,10 @@ function Get-TCMQuota {
     Write-Host ''
 
     # Monitors
-    $monitorPct = [math]::Round(($monitors.Count / 30) * 100, 1)
+    $monitorCount = @($monitors).Count
+    $monitorPct = [math]::Round(($monitorCount / 30) * 100, 1)
     $monitorColor = if ($monitorPct -ge 80) { 'Red' } elseif ($monitorPct -ge 50) { 'Yellow' } else { 'Green' }
-    Write-Host "  Monitors:            $($monitors.Count) / 30     ($monitorPct%)" -ForegroundColor $monitorColor
+    Write-Host "  Monitors:            $monitorCount / 30     ($monitorPct%)" -ForegroundColor $monitorColor
 
     # Daily resources
     $dailyPct = [math]::Round(($dailyResourceUsage / 800) * 100, 1)
@@ -82,9 +83,10 @@ function Get-TCMQuota {
     Write-Host "  Daily Resources:     $dailyResourceUsage / 800   ($dailyPct%)" -ForegroundColor $dailyColor
 
     # Snapshot jobs
-    $snapJobPct = [math]::Round(($snapshots.Count / 12) * 100, 1)
+    $snapJobCount = @($snapshots).Count
+    $snapJobPct = [math]::Round(($snapJobCount / 12) * 100, 1)
     $snapJobColor = if ($snapJobPct -ge 80) { 'Red' } elseif ($snapJobPct -ge 50) { 'Yellow' } else { 'Green' }
-    Write-Host "  Snapshot Jobs:       $($snapshots.Count) / 12     ($snapJobPct%)" -ForegroundColor $snapJobColor
+    Write-Host "  Snapshot Jobs:       $snapJobCount / 12     ($snapJobPct%)" -ForegroundColor $snapJobColor
 
     # Monthly snapshot resources (approximate — we can only see current jobs)
     Write-Host "  Snapshot Resources:  ~$snapshotResourceCount / 20,000 (visible jobs only)" -ForegroundColor DarkGray
@@ -97,11 +99,11 @@ function Get-TCMQuota {
     }
 
     [PSCustomObject]@{
-        MonitorCount         = $monitors.Count
+        MonitorCount         = $monitorCount
         MonitorLimit         = 30
         DailyResourceUsage   = $dailyResourceUsage
         DailyResourceLimit   = 800
-        SnapshotJobCount     = $snapshots.Count
+        SnapshotJobCount     = $snapJobCount
         SnapshotJobLimit     = 12
         SnapshotResources    = $snapshotResourceCount
         MonthlySnapshotLimit = 20000

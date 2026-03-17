@@ -176,15 +176,23 @@ function Sync-TCMDriftToMaester {
         Write-Host "  $driftIcon $monDisplayName`: $($monitorDrifts.Count) drifts across $($baselineData.Count) resources" -ForegroundColor $(if ($monitorDrifts.Count -gt 0) { 'Yellow' } else { 'Green' })
     }
 
+    # Set the environment variable that MT.1060 uses for drift folder discovery.
+    # Note: Maester v2.0.0 MT1060Drift.tests.ps1 reads $env:MEASTER_FOLDER_DRIFT (typo).
+    # We set both spellings for forward-compatibility.
+    $resolvedOutput = (Resolve-Path $OutputPath).Path
+    $env:MEASTER_FOLDER_DRIFT = $resolvedOutput
+    $env:MAESTER_FOLDER_DRIFT = $resolvedOutput
+
     # Summary
     $totalDrifts = ($summaries | Measure-Object -Property DriftCount -Sum).Sum
     Write-Host ''
     if ($totalDrifts -gt 0) {
         Write-Host "⚠️  $totalDrifts active drifts synced across $($summaries.Count) monitors." -ForegroundColor Yellow
-        Write-Host '   Run Invoke-Maester — MT.1060 will pick up the TCM drift suites automatically.' -ForegroundColor DarkGray
+        Write-Host "   Run: Invoke-Maester -Path '$OutputPath'" -ForegroundColor DarkGray
     }
     else {
         Write-Host "✅ No active drifts. All $($summaries.Count) monitors are clean." -ForegroundColor Green
+        Write-Host "   Run: Invoke-Maester -Path '$OutputPath'" -ForegroundColor DarkGray
     }
 
     if ($PassThru) { $summaries }

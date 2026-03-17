@@ -12,14 +12,16 @@ function New-TCMSnapshot {
         Optional description.
     .PARAMETER Resources
         Specific TCM resource type names (e.g., 'microsoft.exchange.transportrule').
+        If neither -Resources nor -Workloads is specified, all workloads are included.
     .PARAMETER Workloads
         Shortcut: specify workload names and all their resource types will be included.
+        If omitted (and no -Resources), defaults to all workloads.
     .PARAMETER Wait
         Wait for the snapshot job to complete before returning.
     .PARAMETER TimeoutSeconds
         Maximum wait time when -Wait is specified. Default: 300.
     .EXAMPLE
-        New-TCMSnapshot -DisplayName "Pre-change baseline" -Workloads Entra, Exchange
+        New-TCMSnapshot -DisplayName "Full tenant baseline" -Wait
     .EXAMPLE
         New-TCMSnapshot -DisplayName "CA Policies" -Resources 'microsoft.entra.conditionalaccesspolicy' -Wait
     #>
@@ -41,7 +43,9 @@ function New-TCMSnapshot {
     )
 
     if (-not $Resources -and -not $Workloads) {
-        throw 'Specify either -Resources or -Workloads.'
+        # Default: snapshot everything
+        $Workloads = @('Entra', 'Exchange', 'Intune', 'Teams', 'Defender', 'Purview')
+        Write-Host 'No workloads specified — snapshotting all workloads.' -ForegroundColor DarkGray
     }
 
     # Resolve workloads to resource names

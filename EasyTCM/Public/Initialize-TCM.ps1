@@ -12,11 +12,15 @@ function Initialize-TCM {
     .PARAMETER TenantId
         The tenant ID to configure. If omitted, uses the current connection's tenant.
     .PARAMETER Workloads
-        Which workloads to grant permissions for. Defaults to all.
+        Which workloads to grant permissions for. Defaults to all — no reason to limit unless
+        you have a specific compliance constraint.
     .PARAMETER SkipPermissionGrant
         Only create the service principal without granting permissions.
     .EXAMPLE
-        Initialize-TCM -Workloads Entra, Exchange, Teams
+        Initialize-TCM
+    .EXAMPLE
+        # Limit to specific workloads (rare — only if needed for compliance)
+        Initialize-TCM -Workloads Entra, Exchange
     #>
     [CmdletBinding(SupportsShouldProcess)]
     param(

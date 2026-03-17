@@ -1,61 +1,53 @@
 function Sync-TCMDriftToMaester {
     <#
     .SYNOPSIS
-        Bridge TCM drift detection to Maester's test framework — the north star.
+        Bridge TCM drift detection to Maester's built-in drift tests (MT.1060).
     .DESCRIPTION
-        Converts TCM active drifts into Maester-compatible drift test artifacts.
-        This solves Maester's biggest open problem: persistent state management
-        for configuration drift detection.
+        Generates the drift folder structure that Maester's MT.1060 natively discovers.
+        No Maester modifications needed — MT.1060 (shipped in Maester v2.0+) auto-discovers
+        drift suites as subfolders containing baseline.json and current.json.
 
-        TCM provides:
-        - Server-side baseline storage (no local state management needed)
-        - Automatic 6-hour monitoring cycles
-        - Active drift tracking with property-level details
+        TCM provides server-side baseline storage and automatic 6-hour monitoring,
+        so there's no local state to manage. This cmdlet simply materializes the
+        TCM drift state into files that Maester already knows how to test.
 
-        This cmdlet bridges that into Maester by generating:
-        1. Baseline JSON files (from TCM monitor baselines)
-        2. Current JSON files (from TCM drift data showing actual values)
-        3. A Pester test file that Maester can discover and run
+        Generated structure:
+            <OutputPath>/
+              TCM-<MonitorName>/
+                baseline.json       # Desired state (from TCM monitor baseline)
+                current.json        # Actual state (baseline + drift deltas)
+                settings.json       # Optional MT.1060 settings
 
-        Maester's drift testing (PR #995) expects a folder structure like:
-            drift/
-              <suite-name>/
-                baseline.json
-                current.json
-
-        This cmdlet generates exactly that, with TCM as the data source.
+        Then just run: Invoke-Maester
+        MT.1060 picks up the TCM drift suites automatically.
 
     .PARAMETER OutputPath
-        The Maester drift folder where test artifacts will be written.
-        Default: ./tests/Custom/drift
+        The folder where drift suites will be written. Should be under or alongside
+        your Maester test root so MT.1060 discovers them.
+        Default: ./tests/Maester/Drift
     .PARAMETER MonitorId
         Sync drifts from a specific monitor. If omitted, syncs all active drifts.
     .PARAMETER IncludeFixed
         Also include recently fixed drifts (for audit trail).
-    .PARAMETER GenerateTest
-        Generate a .Tests.ps1 file that Maester can discover. Default: true.
     .PARAMETER PassThru
         Also return the drift summary objects.
     .EXAMPLE
-        # Sync all TCM drifts into Maester's drift folder
-        Sync-TCMDriftToMaester -OutputPath "./maester-tests/Custom/drift"
+        # Sync all TCM drifts — then run Maester normally
+        Sync-TCMDriftToMaester
+        Invoke-Maester
 
-        # Then run Maester normally:
-        # Invoke-Maester -DriftRoot "./maester-tests/Custom/drift"
     .EXAMPLE
-        # Sync and get summary
-        $summary = Sync-TCMDriftToMaester -PassThru
+        # Sync to a custom path and get summary
+        $summary = Sync-TCMDriftToMaester -OutputPath "./my-tests/drift" -PassThru
         $summary | Where-Object { $_.DriftCount -gt 0 }
     #>
     [CmdletBinding()]
     param(
-        [string]$OutputPath = './tests/Custom/drift',
+        [string]$OutputPath = './tests/Maester/Drift',
 
         [string]$MonitorId,
 
         [switch]$IncludeFixed,
-
-        [bool]$GenerateTest = $true,
 
         [switch]$PassThru
     )
@@ -152,6 +144,14 @@ function Sync-TCMDriftToMaester {
         $baselineData.Values | ConvertTo-Json -Depth 20 | Set-Content -Path $baselineFile -Encoding utf8
         $currentData.Values  | ConvertTo-Json -Depth 20 | Set-Content -Path $currentFile -Encoding utf8
 
+        # Write settings.json for MT.1060 (optional metadata)
+        $settingsFile = Join-Path $suitePath 'settings.json'
+        @{
+            Source    = 'EasyTCM'
+            MonitorId = $monitor.id
+            SyncedAt  = (Get-Date -Format 'o')
+        } | ConvertTo-Json | Set-Content -Path $settingsFile -Encoding utf8
+
         $summary = [PSCustomObject]@{
             MonitorName   = $monitor.displayName
             MonitorId     = $monitor.id
@@ -168,99 +168,16 @@ function Sync-TCMDriftToMaester {
         Write-Host "  $driftIcon $($monitor.displayName): $($monitorDrifts.Count) drifts across $($baselineData.Count) resources" -ForegroundColor $(if ($monitorDrifts.Count -gt 0) { 'Yellow' } else { 'Green' })
     }
 
-    # Step 5: Generate Maester-compatible Pester test
-    if ($GenerateTest) {
-        $testFile = Join-Path $OutputPath 'TCM-Drift.Tests.ps1'
-        $testContent = New-TCMDriftPesterTest -OutputPath $OutputPath
-        Set-Content -Path $testFile -Value $testContent -Encoding utf8
-        Write-Host "  📝 Generated Maester test: $testFile" -ForegroundColor DarkGray
-    }
-
     # Summary
     $totalDrifts = ($summaries | Measure-Object -Property DriftCount -Sum).Sum
     Write-Host ''
     if ($totalDrifts -gt 0) {
         Write-Host "⚠️  $totalDrifts active drifts synced across $($summaries.Count) monitors." -ForegroundColor Yellow
-        Write-Host '   Run Invoke-Maester to see drift results in the Maester report.' -ForegroundColor DarkGray
+        Write-Host '   Run Invoke-Maester — MT.1060 will pick up the TCM drift suites automatically.' -ForegroundColor DarkGray
     }
     else {
         Write-Host "✅ No active drifts. All $($summaries.Count) monitors are clean." -ForegroundColor Green
     }
 
     if ($PassThru) { $summaries }
-}
-
-
-function New-TCMDriftPesterTest {
-    <#
-    .SYNOPSIS
-        Internal: generates a Pester test file for Maester drift discovery.
-    #>
-    [CmdletBinding()]
-    param(
-        [string]$OutputPath
-    )
-
-    @'
-<#
-    .SYNOPSIS
-        TCM-backed drift detection tests for Maester.
-
-    .DESCRIPTION
-        Auto-generated by EasyTCM (Sync-TCMDriftToMaester).
-        Compares TCM monitor baselines against current state.
-        TCM handles state management server-side — no local storage needed.
-
-        Each subfolder represents a TCM monitor.
-        baseline.json = desired state (from TCM monitor baseline)
-        current.json  = actual state (baseline + drift deltas)
-#>
-
-BeforeDiscovery {
-    $driftRoot = $PSScriptRoot
-    $driftSuites = Get-ChildItem -Path $driftRoot -Directory -Filter "TCM-*"
-}
-
-Describe "TCM Configuration Drift: <_.Name>" -ForEach $driftSuites {
-    BeforeAll {
-        $suitePath = $_.FullName
-        $baselinePath = Join-Path $suitePath "baseline.json"
-        $currentPath  = Join-Path $suitePath "current.json"
-
-        $baseline = if (Test-Path $baselinePath) {
-            Get-Content $baselinePath -Raw | ConvertFrom-Json
-        }
-        $current = if (Test-Path $currentPath) {
-            Get-Content $currentPath -Raw | ConvertFrom-Json
-        }
-    }
-
-    It "should have baseline and current files" {
-        $baselinePath | Should -Exist
-        $currentPath  | Should -Exist
-    }
-
-    It "should have no configuration drift" {
-        $baselineJson = $baseline | ConvertTo-Json -Depth 20
-        $currentJson  = $current  | ConvertTo-Json -Depth 20
-
-        if ($baselineJson -ne $currentJson) {
-            # Build a human-readable diff summary
-            $diffs = @()
-            if ($baseline -is [array]) {
-                for ($i = 0; $i -lt $baseline.Count; $i++) {
-                    $b = $baseline[$i] | ConvertTo-Json -Depth 20
-                    $c = if ($i -lt $current.Count) { $current[$i] | ConvertTo-Json -Depth 20 } else { "MISSING" }
-                    if ($b -ne $c) {
-                        $resName = $baseline[$i].displayName ?? "Resource $i"
-                        $diffs += "  Drifted: $resName ($($baseline[$i].resourceType))"
-                    }
-                }
-            }
-            $diffSummary = $diffs -join "`n"
-            "Configuration drift detected:`n$diffSummary" | Should -Be ""
-        }
-    }
-}
-'@
 }

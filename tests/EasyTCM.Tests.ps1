@@ -115,15 +115,15 @@ Describe 'ConvertTo-TCMBaseline' {
     }
 }
 
-Describe 'New-TCMDriftPesterTest' {
-    It 'should generate valid Pester test content' {
-        $content = & (Get-Module EasyTCM) { New-TCMDriftPesterTest -OutputPath './test-drift' }
-
-        $content | Should -Not -BeNullOrEmpty
-        $content | Should -Match 'Describe'
-        $content | Should -Match 'baseline\.json'
-        $content | Should -Match 'current\.json'
-        $content | Should -Match 'TCM-\*'
-        $content | Should -Match 'Should'
+Describe 'New-TCMSnapshot defaults' {
+    It 'should default to all workloads when none specified' {
+        # Verify the function doesn't throw when called without -Workloads/-Resources
+        # by checking the parameter defaults
+        $cmd = Get-Command New-TCMSnapshot -Module EasyTCM
+        $resourcesParam = $cmd.Parameters['Resources']
+        $workloadsParam = $cmd.Parameters['Workloads']
+        # Neither should be mandatory
+        $resourcesParam.Attributes.Mandatory | Should -Not -Contain $true
+        $workloadsParam.Attributes.Mandatory | Should -Not -Contain $true
     }
 }

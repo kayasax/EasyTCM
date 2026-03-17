@@ -52,23 +52,23 @@ Install-Module -Name EasyTCM -Scope CurrentUser
 # 2. Connect to Microsoft Graph
 Connect-MgGraph -Scopes 'ConfigurationMonitoring.ReadWrite.All'
 
-# 3. One-time setup: register TCM service principal & grant permissions
-Initialize-TCM -TenantId $tenantId -Workloads Entra, Exchange, Teams
+# 3. One-time setup (registers TCM service principal + grants all workload permissions)
+Initialize-TCM
 
-# 4. Snapshot your current tenant configuration
-$snapshot = New-TCMSnapshot -Workloads Entra, Exchange
+# 4. Snapshot your entire tenant configuration
+$snapshot = New-TCMSnapshot -DisplayName 'Initial baseline' -Wait
 
 # 5. Convert snapshot to baseline (the magic step)
 $baseline = $snapshot | ConvertTo-TCMBaseline
 
 # 6. Create a monitor — TCM will check every 6 hours
-New-TCMMonitor -Name "Production Baseline" -Baseline $baseline
+New-TCMMonitor -Name 'Production Baseline' -Baseline $baseline
 
 # 7. Check for drifts
 Get-TCMDrift | Format-Table Workload, ResourceType, Property, Expected, Actual
 
-# 8. Generate a report
-Export-TCMDriftReport -OutputPath "./drift-report.html"
+# 8. Feed drifts into Maester — then run Invoke-Maester as usual
+Sync-TCMDriftToMaester
 ```
 
 ---
@@ -150,7 +150,7 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 | Cmdlet | Description |
 |---|---|
-| `Sync-TCMDriftToMaester` | Convert TCM drifts into Maester drift test suites (baseline.json + current.json + .Tests.ps1) |
+| `Sync-TCMDriftToMaester` | Generate Maester-compatible drift suites — MT.1060 picks them up natively, zero Maester modification needed |
 
 ### 🔮 Planned (Not Yet Implemented)
 
@@ -219,7 +219,7 @@ EasyTCM's `Get-TCMQuota` tracks all of these in real-time so you can plan monito
 - [ ] Publish to PSGallery
 
 ### 🔮 Phase 3 — Ecosystem (v0.3.0+)
-- [ ] Propose Maester integration to maester365/maester community
+- [ ] Propose TCM data source to maester365/maester community
 - [ ] Remediation script generation (`Repair-TCMDrift`)
 - [ ] Multi-tenant comparison (`Compare-TCMTenant`)
 - [ ] Multi-cloud support (GCC, China, Germany)

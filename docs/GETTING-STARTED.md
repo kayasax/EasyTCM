@@ -44,8 +44,8 @@ You'll be prompted to authenticate. Use an account with sufficient privileges.
 ## Step 3: Initialize TCM (One-Time Setup)
 
 ```powershell
-# This creates the TCM service principal and grants it permissions
-Initialize-TCM -Workloads Entra, Exchange
+# This creates the TCM service principal and grants permissions for ALL workloads
+Initialize-TCM
 
 # Output:
 # [ 1/3 ] Registering TCM service principal...
@@ -63,12 +63,13 @@ Initialize-TCM -Workloads Entra, Exchange
 ## Step 4: Snapshot Your Current Configuration
 
 ```powershell
-# Take a snapshot of Entra and Exchange settings
-$snapshot = New-TCMSnapshot -DisplayName "My first snapshot" -Workloads Entra -Wait
+# Take a snapshot of your entire tenant
+$snapshot = New-TCMSnapshot -DisplayName "My first snapshot" -Wait
 
 # The -Wait flag polls until the snapshot completes
 # Output:
-# Creating snapshot 'My first snapshot' with 13 resource types...
+# No workloads specified — snapshotting all workloads.
+# Creating snapshot 'My first snapshot' with 52 resource types...
 #   Status: running — waiting 10s...
 #   Status: running — waiting 10s...
 # Snapshot completed successfully.
@@ -137,24 +138,24 @@ Get-TCMQuota
 
 ## Step 9 (Optional): Bridge to Maester
 
-If you use [Maester](https://maester.dev/) for M365 security testing:
+If you use [Maester](https://maester.dev/) v2.0+ for M365 security testing:
 
 ```powershell
-# Sync TCM drifts into Maester's drift testing format
-Sync-TCMDriftToMaester -OutputPath "./maester-tests/Custom/drift"
+# Sync TCM drifts into Maester's drift folder — MT.1060 picks them up natively
+Sync-TCMDriftToMaester
 
 # Output:
 # 🔗 Syncing TCM drifts to Maester format...
 #   ⚠️ Entra Baseline Monitor: 2 drifts across 42 resources
-#   📝 Generated Maester test: ./maester-tests/Custom/drift/TCM-Drift.Tests.ps1
 #
 # ⚠️ 2 active drifts synced across 1 monitors.
-#    Run Invoke-Maester to see drift results in the Maester report.
+#    Run Invoke-Maester — MT.1060 will pick up the TCM drift suites automatically.
 
-# Now run Maester normally — it will discover the TCM drift tests
-cd maester-tests
+# Now run Maester normally — MT.1060 auto-discovers the TCM drift suites
 Invoke-Maester
 ```
+
+No Maester modifications needed. MT.1060 discovers any subfolder containing `baseline.json` + `current.json`.
 
 ---
 
@@ -172,8 +173,11 @@ Get-TCMDrift            # Any active drifts?
 New-TCMSnapshot -DisplayName "Teams baseline" -Workloads Teams -Wait |
     Get-TCMSnapshot -IncludeContent |
     ConvertTo-TCMBaseline |
-    New-TCMMonitor -DisplayName "Teams Monitor"
+    New-TCMMonitor -DisplayName "Teams-only Monitor"
 ```
+
+> **Tip:** You rarely need `-Workloads`. The default is to snapshot everything.
+> Use it only when you want a monitor scoped to a single workload.
 
 ### Audit All Monitors
 ```powershell

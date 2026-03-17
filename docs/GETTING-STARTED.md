@@ -35,7 +35,10 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 Connect-MgGraph -Scopes @(
     'Application.ReadWrite.All'          # To create TCM service principal
     'AppRoleAssignment.ReadWrite.All'    # To grant permissions
-    'ConfigurationMonitoring.ReadWrite.All'  # To manage monitors and snapshots
+    'Policy.Read.All'                    # Entra policy access
+    'RoleManagement.Read.All'            # Entra role access
+    'Organization.Read.All'              # Exchange + Teams access
+    'DeviceManagementConfiguration.Read.All'  # Intune access
 )
 ```
 
@@ -69,7 +72,8 @@ $snapshot = New-TCMSnapshot -DisplayName "My first snapshot" -Wait
 # The -Wait flag polls until the snapshot completes
 # Output:
 # No workloads specified — snapshotting all workloads.
-# Creating snapshot 'My first snapshot' with 52 resource types...
+# Creating snapshot 'My first snapshot' with 38 resource types...
+#   (Entra: 10, Exchange: 18, Intune: 1, Teams: 9)
 #   Status: running — waiting 10s...
 #   Status: running — waiting 10s...
 # Snapshot completed successfully.
@@ -150,24 +154,27 @@ Get-TCMQuota
 
 ## Step 9 (Optional): Bridge to Maester
 
-If you use [Maester](https://maester.dev/) v2.0+ for M365 security testing:
+If you use [Maester](https://maester.dev/) for M365 security testing:
 
 ```powershell
+# Install Maester if you haven't already
+Install-Module Maester -Scope CurrentUser -Force
+
+# Create a Maester test folder and install default tests
+md maester-tests
+cd maester-tests
+Install-MaesterTests
+
 # Sync TCM drifts into Maester's drift folder — MT.1060 picks them up natively
-Sync-TCMDriftToMaester
+Sync-TCMDriftToMaester -OutputPath './tests/Maester/Drift'
 
-# Output:
-# 🔗 Syncing TCM drifts to Maester format...
-#   ⚠️ Entra Baseline Monitor: 2 drifts across 42 resources
-#
-# ⚠️ 2 active drifts synced across 1 monitors.
-#    Run Invoke-Maester — MT.1060 will pick up the TCM drift suites automatically.
-
-# Now run Maester normally — MT.1060 auto-discovers the TCM drift suites
+# Now run Maester normally — MT.1060 auto-discovers TCM drift suites
 Invoke-Maester
 ```
 
-No Maester modifications needed. MT.1060 discovers any subfolder containing `baseline.json` + `current.json`.
+**How it works:** `Sync-TCMDriftToMaester` writes `baseline.json` + `current.json` into `./tests/Maester/Drift/TCM-<MonitorName>/`. Maester's MT.1060 test (shipped in v2.0+, Aug 2025) auto-discovers any subfolder with that structure and compares them. Zero Maester modifications needed.
+
+No drifts yet? That's good — it means your tenant config hasn't changed since the snapshot. To test the integration, make a minor change (e.g., rename a Named Location in Entra portal), wait for the next 6-hour TCM cycle, then re-sync.
 
 ---
 
@@ -205,7 +212,7 @@ Get-TCMMonitor | Format-Table displayName, status, monitorRunFrequencyInHours, c
 | `Initialize-TCM` fails | Ensure you have Application Admin + Security Admin roles, or Global Admin |
 | Snapshot stuck in "running" | TCM processes asynchronously. Wait a few minutes, or check errors: `(Get-TCMSnapshot -Id $id).errorDetails` |
 | No drifts after creating monitor | Monitors run at fixed 6h intervals (6 AM, 12 PM, 6 PM, 12 AM GMT). Wait for the next cycle. |
-| `Test-TCMConnection` shows `TCMApiReachable: False` | Permissions may take a few minutes to propagate after `Initialize-TCM`. Also ensure you connected with `ConfigurationMonitoring.ReadWrite.All` scope. |
+| `Test-TCMConnection` shows `TCMApiReachable: False` | Permissions may take a few minutes to propagate after `Initialize-TCM`. Ensure you connected with Graph scopes like `Policy.Read.All`, `Organization.Read.All`, etc. |
 | Quota exceeded | Use `Get-TCMQuota` to see usage. Reduce resources per monitor or delete unused monitors/snapshots. |
 
 ---
@@ -214,5 +221,5 @@ Get-TCMMonitor | Format-Table displayName, status, monitorRunFrequencyInHours, c
 
 - Read the [full cmdlet reference](../README.md#-core-cmdlets)
 - Explore [baseline templates](../templates/) for CIS/CISA standards
-- Learn about [the Maester bridge](../docs/MAESTER-BRIDGE.md)
+- Learn about [the Maester bridge](#step-9-optional-bridge-to-maester)
 - Check the [product vision and roadmap](../docs/VISION.md)

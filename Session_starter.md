@@ -8,8 +8,8 @@
 **Project:** EasyTCM
 **Repo Name:** UTCM
 **Type:** PowerShell Module — Microsoft 365 Tenant Configuration Management
-**Purpose:** Simplify Microsoft's Tenant Configuration Management (TCM) Graph beta APIs into an accessible PowerShell module — the "EasyPIM for TCM". Provides cmdlets for setup, snapshots, monitors, drift detection, reporting, and remediation guidance across Entra, Exchange, Intune, Teams, Defender, and Purview.
-**Status:** ✅ v0.1.0 shipped — MVP complete, pre-launch validation phase
+**Purpose:** Simplify Microsoft's Tenant Configuration Management (TCM) Graph beta APIs into an accessible PowerShell module — the "EasyPIM for TCM". Provides cmdlets for setup, snapshots, monitors, drift detection, reporting, and remediation guidance across Entra, Exchange, Intune, and Teams.
+**Status:** ✅ v0.1.0 validated on live tenant — monitor active, awaiting first drift cycle
 **GitHub:** https://github.com/kayasax/EasyTCM
 **North Star:** TCM as Maester's drift detection backend (Sync-TCMDriftToMaester)
 **Author:** Loïc MICHEL ([kayasax](https://github.com/kayasax))
@@ -29,17 +29,18 @@
 ---
 
 ## 🎯 Current State
-**Build Status:** ✅ v0.1.0 — 14 cmdlets shipped, module imports and exports clean
-**Key Achievement:** Full MVP with Maester bridge, CI/CD, launch kit, social media copy
-**Active Issue:** Validate all cmdlets against a live TCM tenant (FIRST PRIORITY)
+**Build Status:** ✅ v0.1.0 — 14 cmdlets + 3 private helpers, validated on live tenant
+**Key Achievement:** Full end-to-end pipeline works: snapshot → baseline → monitor → quota. Monitor is **active** on live tenant.
+**Active Issue:** Wait for first drift cycle (~6h), then validate Get-TCMDrift + Sync-TCMDriftToMaester
 **AI Enhancement:** Session configured with MCP server awareness for Microsoft docs
 
 **Architecture Highlights:**
 - PowerShell module following EasyPIM patterns (cmdlet-per-operation, JSON configs)
-- TCM API covers 6 workloads: Entra, Exchange, Intune, Teams, Defender/Purview
+- TCM API covers 4 workloads: Entra (10 types), Exchange (18), Intune (1), Teams (9) = 38 total
+- Defender and Purview workloads **removed** — ALL their types rejected by API (2026-03)
 - Key innovation: Snapshot-to-Baseline converter (nobody else does this)
-- Drift → Maester bridge to complement existing community tooling
-- Quota management built-in (800 resources/day, 20k snapshots/month, 30 monitors)
+- Drift → Maester bridge via MT.1060 (merged in Maester v2.0+, Aug 2025)
+- Quota management built-in with profiles: SecurityCritical (default), Recommended, Full
 
 ---
 
@@ -50,13 +51,24 @@
 - TCM requires a dedicated service principal (AppId: `03b07b79-c5bc-4b5e-9bfa-13acf4a99998`)
 - Two auth layers: (1) authenticate to Graph, (2) TCM SP impersonates calls to workload endpoints
 - TCM schema is M365DSC-derived — resource types from the TCM schema store at `json.schemastore.org/utcm-monitor.json`
-- Monitors run at **fixed 6-hour intervals** (not configurable)
+- Monitors run at **fixed 6-hour intervals** (6 AM, 12 PM, 6 PM, 12 AM UTC) — not configurable
 - Baseline update **deletes all existing drifts** for that monitor
 - Fixed drifts auto-deleted after 30 days
-- Snapshots retained max 7 days, max 12 visible jobs
+- Snapshot jobs evicted from API once 12 job limit reached (FIFO, not strictly 7-day expiry)
+- **Monitor baseline API requires PascalCase keys** (DisplayName, ResourceType, Properties) — different from camelCase in snapshot responses
+- **Invoke-MgGraphRequest returns OrderedDictionary** (hashtable), but JSON roundtrip creates PSCustomObject — code must handle both
+- `Exchange.ManageAsApp` is NOT a valid Graph app role
+- Defender and Purview workloads: ALL resource types rejected by API as of 2026-03
+
+**Validated on Live Tenant (2026-03-17):**
+- Tenant: `9b08d26c-2c4e-45c8-9313-b700c2ee6e3d` (loic@yespapa.eu)
+- TCM SP ObjectId: `d21a1fee-ed53-4c44-aa2e-453a6f007849`
+- Active monitor: `eca21d95-bee5-414d-b15e-1328d79f1b7d` (15 resources, SecurityCritical)
+- Snapshot status: `partiallySuccessful` (38 types requested, some Exchange auth issues)
+- Quota: 1/30 monitors, 60/800 daily resources (7.5%)
 
 **Competitive Landscape:**
-- **Maester** (805★) — Pester-based security testing. Just merged drift testing (PR #995, Aug 2025). Struggling with state management. TCM solves this server-side.
+- **Maester** (805★) — Pester-based security testing. MT.1060 drift testing merged Aug 2025. TCM solves server-side state management.
 - **EasyPIM** (221★) — PIM-only scope, excellent UX model to follow. Same author (kayasax).
 - **M365DSC** — Full desired-state config, too heavy for monitoring-only use cases.
 - **EntraExporter** — Export-only, no monitoring or drift detection.
@@ -92,6 +104,9 @@
 | 2026-03-17 | ✅ GitHub Actions CI (PSScriptAnalyzer + Pester) + PSGallery publish workflow |
 | 2026-03-17 | ✅ Full product launch kit: vision doc, getting started guide, social media copy, issue templates |
 | 2026-03-17 | ✅ CONTRIBUTING.md, CHANGELOG.md, PR templates, bug/feature/template issue templates |
+| 2026-03-17 | ✅ Live tenant validation: snapshot (38 types), baseline (15 SecurityCritical), monitor ACTIVE |
+| 2026-03-17 | ✅ Fixed: PascalCase API keys, PSCustomObject/.Keys, hashtable .Count, Defender/Purview removed |
+| 2026-03-17 | ✅ Quota dashboard fixed (single-hashtable .Count bug) |
 
 ---
 
@@ -105,10 +120,12 @@
 - [x] ✅ Pester unit tests
 - [x] ✅ Launch kit (blog, Twitter thread, LinkedIn, Reddit, Maester community post, YouTube script)
 
-### 🎯 NOW — Validate & Ship (v0.2.0)
-- [ ] 🚨 **VALIDATE AGAINST LIVE TENANT** — first priority!
-- [ ] 🔧 Fix ConvertTo-TCMBaseline based on real snapshot data format
-- [ ] 🔧 Fix Sync-TCMDriftToMaester based on real drift data
+### 🎯 NOW — Validate Drifts & Ship (v0.2.0)
+- [x] ✅ VALIDATED: Initialize-TCM, Test-TCMConnection, New-TCMSnapshot, Get-TCMSnapshot, ConvertTo-TCMBaseline, New-TCMMonitor, Get-TCMMonitor, Get-TCMQuota
+- [x] ✅ Fixed: PascalCase keys, PSCustomObject iteration, hashtable .Count, empty arrays, Exchange.ManageAsApp removal
+- [x] ✅ Removed Defender + Purview workloads (all types rejected by API)
+- [ ] ⏳ Wait for first drift cycle → validate Get-TCMDrift + Sync-TCMDriftToMaester
+- [ ] 🔗 Test Maester integration end-to-end (install Maester, run Invoke-Maester after sync)
 - [ ] 📊 `Export-TCMDriftReport` (HTML with admin portal deep links)
 - [ ] 📚 First CIS/CISA baseline template
 - [ ] 🚀 Publish to PSGallery
@@ -127,7 +144,8 @@
 **Common Commands:**
 - `Import-Module .\EasyTCM\EasyTCM.psd1` — Load module in dev
 - `Invoke-Pester .\tests\` — Run test suite
-- `Connect-MgGraph -Scopes 'ConfigurationMonitoring.ReadWrite.All'` — Auth to Graph for TCM
+- `Connect-MgGraph -Scopes 'Policy.Read.All','RoleManagement.Read.All','Organization.Read.All','DeviceManagementConfiguration.Read.All'` — Auth to Graph for TCM
+- `Connect-MgGraph -UseDeviceCode ...` — Use device code flow from VS Code terminal
 
 **Key Files:**
 - `EasyTCM/EasyTCM.psd1` — Module manifest

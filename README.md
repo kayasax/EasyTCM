@@ -9,8 +9,8 @@
   <p align="center">
     <a href="https://www.powershellgallery.com/packages/EasyTCM"><img src="https://img.shields.io/powershellgallery/v/EasyTCM?label=PSGallery&logo=powershell&color=blue" alt="PSGallery Version"></a>
     <a href="https://www.powershellgallery.com/packages/EasyTCM"><img src="https://img.shields.io/powershellgallery/dt/EasyTCM?label=Downloads&color=green" alt="PSGallery Downloads"></a>
-    <a href="https://github.com/kayasax/UTCM/stargazers"><img src="https://img.shields.io/github/stars/kayasax/UTCM?style=social" alt="GitHub Stars"></a>
-    <a href="https://github.com/kayasax/UTCM/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kayasax/UTCM" alt="License"></a>
+    <a href="https://github.com/kayasax/EasyTCM/stargazers"><img src="https://img.shields.io/github/stars/kayasax/EasyTCM?style=social" alt="GitHub Stars"></a>
+    <a href="https://github.com/kayasax/EasyTCM/blob/main/LICENSE"><img src="https://img.shields.io/github/license/kayasax/EasyTCM" alt="License"></a>
   </p>
 </p>
 
@@ -84,8 +84,8 @@ Install-Module -Name EasyTCM -Scope CurrentUser -Force
 ### From Source
 
 ```powershell
-git clone https://github.com/kayasax/UTCM.git
-Import-Module ./UTCM/EasyTCM/EasyTCM.psd1
+git clone https://github.com/kayasax/EasyTCM.git
+Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 ```
 
 ### Requirements
@@ -220,8 +220,8 @@ Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines
 
 ```powershell
 # Clone and load for development
-git clone https://github.com/kayasax/UTCM.git
-cd UTCM
+git clone https://github.com/kayasax/EasyTCM.git
+cd EasyTCM
 Import-Module ./EasyTCM/EasyTCM.psd1
 Invoke-Pester ./tests/
 ```

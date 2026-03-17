@@ -1,0 +1,54 @@
+name: Publish to PowerShell Gallery
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    name: Publish Module
+    runs-on: ubuntu-latest
+    environment: PSGallery
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate Module
+        shell: pwsh
+        run: |
+          $manifest = Test-ModuleManifest -Path ./EasyTCM/EasyTCM.psd1
+          Write-Host "Module: $($manifest.Name) v$($manifest.Version)"
+          Write-Host "Functions: $($manifest.ExportedFunctions.Keys -join ', ')"
+
+          # Ensure version matches the release tag
+          $tagVersion = '${{ github.event.release.tag_name }}' -replace '^v', ''
+          if ($manifest.Version.ToString() -ne $tagVersion) {
+              throw "Module version ($($manifest.Version)) does not match release tag ($tagVersion). Update EasyTCM.psd1 first."
+          }
+          Write-Host "Version match confirmed: $tagVersion" -ForegroundColor Green
+
+      - name: Install Dependencies
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Run Tests
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+      - name: Publish to PSGallery
+        shell: pwsh
+        env:
+          NUGET_API_KEY: ${{ secrets.PSGALLERY_API_KEY }}
+        run: |
+          Publish-Module -Path ./EasyTCM -NuGetApiKey $env:NUGET_API_KEY -Verbose
+          Write-Host "Published EasyTCM to PowerShell Gallery!" -ForegroundColor Green

@@ -1,0 +1,65 @@
+name: CI — Lint & Test
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - 'EasyTCM/**'
+      - 'tests/**'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - 'EasyTCM/**'
+      - 'tests/**'
+
+permissions:
+  contents: read
+  checks: write
+
+jobs:
+  lint-and-test:
+    name: PowerShell Lint & Unit Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name PSScriptAnalyzer -Force -Scope CurrentUser
+
+      - name: Run PSScriptAnalyzer
+        shell: pwsh
+        run: |
+          $results = Invoke-ScriptAnalyzer -Path ./EasyTCM -Recurse -Settings PSGallery -Severity Warning,Error
+          if ($results) {
+              $results | Format-Table -AutoSize
+              throw "PSScriptAnalyzer found $($results.Count) issue(s)"
+          }
+          Write-Host "PSScriptAnalyzer: No issues found" -ForegroundColor Green
+
+      - name: Install Pester
+        shell: pwsh
+        run: |
+          Install-Module -Name Pester -MinimumVersion 5.0 -Force -Scope CurrentUser
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+
+      - name: Run Unit Tests
+        shell: pwsh
+        run: |
+          $config = New-PesterConfiguration
+          $config.Run.Path = './tests'
+          $config.TestResult.Enabled = $true
+          $config.TestResult.OutputPath = './TestResults/results.xml'
+          $config.TestResult.OutputFormat = 'JUnitXml'
+          $config.Output.Verbosity = 'Detailed'
+          Invoke-Pester -Configuration $config
+
+      - name: Upload Test Results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults/

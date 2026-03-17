@@ -9,7 +9,9 @@
 **Repo Name:** UTCM
 **Type:** PowerShell Module — Microsoft 365 Tenant Configuration Management
 **Purpose:** Simplify Microsoft's Tenant Configuration Management (TCM) Graph beta APIs into an accessible PowerShell module — the "EasyPIM for TCM". Provides cmdlets for setup, snapshots, monitors, drift detection, reporting, and remediation guidance across Entra, Exchange, Intune, Teams, Defender, and Purview.
-**Status:** 🏗️ Architecture & Planning Phase
+**Status:** ✅ v0.1.0 shipped — MVP complete, pre-launch validation phase
+**GitHub:** https://github.com/kayasax/EasyTCM
+**North Star:** TCM as Maester's drift detection backend (Sync-TCMDriftToMaester)
 **Author:** Loïc MICHEL ([kayasax](https://github.com/kayasax))
 **License:** MIT
 
@@ -27,9 +29,9 @@
 ---
 
 ## 🎯 Current State
-**Build Status:** 🏗️ Pre-development — architecture defined, no code yet
-**Key Achievement:** Comprehensive market analysis and feature gap identification completed
-**Active Issue:** Initial module scaffolding and README creation
+**Build Status:** ✅ v0.1.0 — 14 cmdlets shipped, module imports and exports clean
+**Key Achievement:** Full MVP with Maester bridge, CI/CD, launch kit, social media copy
+**Active Issue:** Validate all cmdlets against a live TCM tenant (FIRST PRIORITY)
 **AI Enhancement:** Session configured with MCP server awareness for Microsoft docs
 
 **Architecture Highlights:**
@@ -85,39 +87,39 @@
 | 2026-03-17 | ✅ Deep research: TCM APIs, Maester, EasyPIM, M365DSC landscape analysis |
 | 2026-03-17 | ✅ Feature gap analysis — identified 7 major opportunity areas |
 | 2026-03-17 | ✅ MVP scope and priority defined (P0–P3) |
-| 2026-03-17 | ✅ README and project documentation created |
-| 2026-03-17 | ✅ GitHub repository created |
+| 2026-03-17 | ✅ GitHub repository created (kayasax/EasyTCM) |
+| 2026-03-17 | ✅ v0.1.0 MVP shipped — 14 cmdlets across setup, snapshot, monitor, drift, Maester bridge |
+| 2026-03-17 | ✅ GitHub Actions CI (PSScriptAnalyzer + Pester) + PSGallery publish workflow |
+| 2026-03-17 | ✅ Full product launch kit: vision doc, getting started guide, social media copy, issue templates |
+| 2026-03-17 | ✅ CONTRIBUTING.md, CHANGELOG.md, PR templates, bug/feature/template issue templates |
 
 ---
 
 ## 📋 Active Priorities
 
-### P0 — Foundation (Current Sprint)
+### ✅ DONE — v0.1.0 Foundation
 - [x] ✅ Market analysis and feature gap identification
-- [x] ✅ README and project vision documentation
-- [x] ✅ GitHub repository creation
-- [ ] 🏗️ PowerShell module scaffold (`EasyTCM.psd1`, `EasyTCM.psm1`)
-- [ ] 🏗️ `Initialize-TCM` cmdlet (service principal setup + permission grants)
-- [ ] 🏗️ `New-TCMSnapshot` / `Get-TCMSnapshot` cmdlets
-- [ ] 🏗️ `New-TCMMonitor` / `Get-TCMMonitor` cmdlets
-- [ ] 🏗️ `Get-TCMDrift` cmdlet
-- [ ] 🏗️ Snapshot-to-Baseline converter (`ConvertTo-TCMBaseline`)
+- [x] ✅ README, vision doc, getting started guide
+- [x] ✅ GitHub repository + CI/CD workflows
+- [x] ✅ 14 cmdlets: Initialize-TCM, Test-TCMConnection, New/Get/Remove-TCMSnapshot, ConvertTo-TCMBaseline, New/Get/Update/Remove-TCMMonitor, Get-TCMDrift, Get-TCMMonitoringResult, Get-TCMQuota, Sync-TCMDriftToMaester
+- [x] ✅ Pester unit tests
+- [x] ✅ Launch kit (blog, Twitter thread, LinkedIn, Reddit, Maester community post, YouTube script)
 
-### P1 — Reporting & UX
-- [ ] 📊 `Export-TCMDriftReport` (HTML report with remediation links)
-- [ ] 📊 `Get-TCMQuota` (quota dashboard)
-- [ ] 📊 Teams notification integration
-- [ ] 🧪 Pester test suite
+### 🎯 NOW — Validate & Ship (v0.2.0)
+- [ ] 🚨 **VALIDATE AGAINST LIVE TENANT** — first priority!
+- [ ] 🔧 Fix ConvertTo-TCMBaseline based on real snapshot data format
+- [ ] 🔧 Fix Sync-TCMDriftToMaester based on real drift data
+- [ ] 📊 `Export-TCMDriftReport` (HTML with admin portal deep links)
+- [ ] 📚 First CIS/CISA baseline template
+- [ ] 🚀 Publish to PSGallery
+- [ ] 📣 Public launch: blog + social + Maester community
 
-### P2 — Ecosystem & Templates
-- [ ] 📚 CIS/CISA baseline template library
-- [ ] 🔗 Maester bridge (`Sync-TCMDriftToMaester`)
-- [ ] 🔗 CI/CD integration (GitHub Actions, Azure DevOps)
-
-### P3 — Advanced
-- [ ] 🔧 `Repair-TCMDrift` (remediation script generation)
-- [ ] 🌍 `Compare-TCMTenant` (multi-tenant comparison)
-- [ ] ☁️ Multi-cloud support
+### 🔮 NEXT — Ecosystem (v0.3.0+)
+- [ ] Teams webhook notifications
+- [ ] `Repair-TCMDrift` (remediation scripts)
+- [ ] `Compare-TCMTenant` (multi-tenant diff)
+- [ ] Multi-cloud support (GCC, China, Germany)
+- [ ] EntraExporter integration
 
 ---
 

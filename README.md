@@ -99,7 +99,19 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 ---
 
-## 🎯 Core Cmdlets
+## 📖 Documentation
+
+| Document | Description |
+|---|---|
+| **[Getting Started](docs/GETTING-STARTED.md)** | Step-by-step guide: install → setup → first monitor in 10 minutes |
+| [Product Vision & Roadmap](docs/VISION.md) | Where we're going and why |
+| [Launch Kit](docs/LAUNCH-KIT.md) | Blog post, social media copy, YouTube script |
+| [Contributing](CONTRIBUTING.md) | How to contribute cmdlets, templates, and fixes |
+| [Changelog](CHANGELOG.md) | Version history |
+
+---
+
+## 🎯 Cmdlets — v0.1.0 (14 shipped)
 
 ### Setup & Authentication
 
@@ -112,43 +124,42 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 | Cmdlet | Description |
 |---|---|
-| `New-TCMSnapshot` | Create a snapshot job for one or more workloads |
-| `Get-TCMSnapshot` | Retrieve snapshot results |
+| `New-TCMSnapshot` | Create a snapshot job with workload shortcuts and optional `-Wait` |
+| `Get-TCMSnapshot` | Retrieve snapshot jobs with optional `-IncludeContent` |
 | `Remove-TCMSnapshot` | Delete a snapshot job |
-| `ConvertTo-TCMBaseline` | **Convert a snapshot into a monitor baseline** |
+| `ConvertTo-TCMBaseline` | ⭐ **Convert a snapshot into a monitor baseline** — the key innovation |
 
 ### Monitors
 
 | Cmdlet | Description |
 |---|---|
-| `New-TCMMonitor` | Create a configuration monitor with a baseline |
-| `Get-TCMMonitor` | List and retrieve monitor details |
+| `New-TCMMonitor` | Create a configuration monitor with quota-aware warnings |
+| `Get-TCMMonitor` | List and retrieve monitor details with optional baseline |
 | `Update-TCMMonitor` | Update a monitor's baseline (⚠️ deletes existing drifts) |
 | `Remove-TCMMonitor` | Delete a monitor |
 
-### Drift Detection
+### Drift Detection & Quota
 
 | Cmdlet | Description |
 |---|---|
-| `Get-TCMDrift` | Retrieve active configuration drifts |
-| `Get-TCMMonitoringResult` | Get detailed monitoring results per cycle |
-| `Export-TCMDriftReport` | Generate HTML/PDF drift report with remediation guidance |
-| `Repair-TCMDrift` | Generate remediation scripts from detected drifts |
+| `Get-TCMDrift` | Enriched drifts with workload classification, filtering |
+| `Get-TCMMonitoringResult` | Per-monitor cycle results |
+| `Get-TCMQuota` | Real-time quota dashboard (monitors, resources, snapshots) |
 
-### Operations & Quota
-
-| Cmdlet | Description |
-|---|---|
-| `Get-TCMQuota` | Dashboard showing resource/monitor/snapshot quota usage |
-| `Get-TCMWorkload` | List supported workloads and their resource types |
-
-### Ecosystem Integration
+### 🔗 Maester Bridge (North Star)
 
 | Cmdlet | Description |
 |---|---|
-| `Sync-TCMDriftToMaester` | Convert TCM drifts to Maester test results |
-| `Compare-TCMTenant` | Compare configurations across two tenants |
-| `New-TCMMonitor -Template` | Create monitor from CIS/CISA baseline templates |
+| `Sync-TCMDriftToMaester` | Convert TCM drifts into Maester drift test suites (baseline.json + current.json + .Tests.ps1) |
+
+### 🔮 Planned (Not Yet Implemented)
+
+| Cmdlet | Target | Description |
+|---|---|---|
+| `Export-TCMDriftReport` | v0.2 | HTML/PDF drift report with admin portal deep links |
+| `Repair-TCMDrift` | v0.3 | Generate remediation scripts from detected drifts |
+| `Compare-TCMTenant` | v0.3 | Compare configurations across two tenants |
+| Baseline Templates | v0.2 | CIS/CISA pre-built baselines via `-Template` parameter |
 
 ---
 
@@ -187,30 +198,32 @@ EasyTCM's `Get-TCMQuota` tracks all of these in real-time so you can plan monito
 
 ## 🏗️ Project Roadmap
 
-### Phase 1 — Foundation (Current) 🏗️
-- [ ] PowerShell module scaffold
-- [ ] `Initialize-TCM` (setup automation)
-- [ ] Snapshot cmdlets (`New-TCMSnapshot`, `Get-TCMSnapshot`)
-- [ ] Monitor cmdlets (`New-TCMMonitor`, `Get-TCMMonitor`, `Get-TCMDrift`)
-- [ ] **Snapshot-to-Baseline converter** (`ConvertTo-TCMBaseline`)
+### ✅ Phase 1 — Foundation (v0.1.0) — SHIPPED
+- [x] PowerShell module scaffold (14 cmdlets)
+- [x] `Initialize-TCM` — one-command setup
+- [x] Snapshot cmdlets with workload shortcuts
+- [x] Monitor CRUD with quota-aware warnings
+- [x] `ConvertTo-TCMBaseline` — Snap → Baseline converter
+- [x] `Get-TCMDrift` with workload enrichment
+- [x] `Get-TCMQuota` — real-time quota dashboard
+- [x] `Sync-TCMDriftToMaester` — Maester bridge (north star)
+- [x] GitHub Actions CI + PSGallery publish workflow
+- [x] Pester unit tests
 
-### Phase 2 — Reporting & UX
-- [ ] HTML drift reports with admin portal deep links
-- [ ] Quota dashboard (`Get-TCMQuota`)
+### 🏗️ Phase 2 — Validate & Report (v0.2.0) — IN PROGRESS
+- [ ] Validate all cmdlets against live TCM tenant
+- [ ] Refine `ConvertTo-TCMBaseline` with real snapshot data
+- [ ] `Export-TCMDriftReport` — HTML reports with admin portal deep links
 - [ ] Teams adaptive card notifications
-- [ ] Pester test suite
+- [ ] CIS/CISA baseline templates
+- [ ] Publish to PSGallery
 
-### Phase 3 — Ecosystem
-- [ ] CIS Microsoft 365 Benchmark baseline templates
-- [ ] CISA SCuBA baseline templates
-- [ ] Maester bridge (`Sync-TCMDriftToMaester`)
-- [ ] CI/CD integration (GitHub Actions, Azure DevOps)
-
-### Phase 4 — Advanced
+### 🔮 Phase 3 — Ecosystem (v0.3.0+)
+- [ ] Propose Maester integration to maester365/maester community
 - [ ] Remediation script generation (`Repair-TCMDrift`)
 - [ ] Multi-tenant comparison (`Compare-TCMTenant`)
 - [ ] Multi-cloud support (GCC, China, Germany)
-- [ ] PSGallery publication
+- [ ] EntraExporter integration
 
 ---
 

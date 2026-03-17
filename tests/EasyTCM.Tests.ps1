@@ -47,14 +47,13 @@ Describe 'EasyTCM Module' {
 }
 
 Describe 'Get-TCMWorkloadResources' {
-    It 'should return all 6 workloads' {
+    It 'should return all 4 workloads' {
         $map = & (Get-Module EasyTCM) { Get-TCMWorkloadResources }
         $map.Keys | Should -Contain 'Entra'
         $map.Keys | Should -Contain 'Exchange'
         $map.Keys | Should -Contain 'Intune'
         $map.Keys | Should -Contain 'Teams'
-        $map.Keys | Should -Contain 'Defender'
-        $map.Keys | Should -Contain 'Purview'
+        $map.Keys.Count | Should -Be 4
     }
 
     It 'should have resource types in correct format' {

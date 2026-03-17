@@ -17,12 +17,11 @@ function Get-TCMMonitoringProfile {
 
     @{
         # The configs that, if changed, create immediate security exposure.
-        # Estimated: ~15 types, covers 80% of real-world attack surface.
+        # Covers identity, mail security, and federation — 80% of attack surface.
         SecurityCritical = @(
             # Entra — identity is the new perimeter
             'microsoft.entra.conditionalaccesspolicy'
             'microsoft.entra.authenticationmethodpolicy'
-            'microsoft.entra.securitydefaultspolicy'
             'microsoft.entra.authorizationpolicy'
             'microsoft.entra.crosstenantaccesspolicy'
             'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'
@@ -37,18 +36,14 @@ function Get-TCMMonitoringProfile {
             'microsoft.exchange.safelinkspolicy'
             # Teams — federation = external access
             'microsoft.teams.federationconfiguration'
-            # Defender
-            'microsoft.defender.safeattachmentpolicy'
-            'microsoft.defender.safelinkspolicy'
         )
 
-        # SecurityCritical + compliance, role management, device policies.
-        # Estimated: ~30 types, good balance of coverage vs quota.
+        # SecurityCritical + role management, compliance, broader policies.
+        # Good balance of coverage vs quota.
         Recommended = @(
             # All of SecurityCritical
             'microsoft.entra.conditionalaccesspolicy'
             'microsoft.entra.authenticationmethodpolicy'
-            'microsoft.entra.securitydefaultspolicy'
             'microsoft.entra.authorizationpolicy'
             'microsoft.entra.crosstenantaccesspolicy'
             'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'
@@ -61,27 +56,20 @@ function Get-TCMMonitoringProfile {
             'microsoft.exchange.safeattachmentpolicy'
             'microsoft.exchange.safelinkspolicy'
             'microsoft.teams.federationconfiguration'
-            'microsoft.defender.safeattachmentpolicy'
-            'microsoft.defender.safelinkspolicy'
             # + Role management
             'microsoft.entra.roledefinition'
-            'microsoft.entra.rolemanagementpolicy'
             # + Exchange org & connectors
             'microsoft.exchange.organizationconfig'
             'microsoft.exchange.inboundconnector'
             'microsoft.exchange.outboundconnector'
             'microsoft.exchange.hostedoutboundspamfilterpolicy'
+            'microsoft.exchange.malwarefilterrule'
             # + Teams policies
             'microsoft.teams.meetingpolicy'
             'microsoft.teams.messagingpolicy'
             'microsoft.teams.apppermissionpolicy'
-            # + Intune device compliance
-            'microsoft.intune.devicecompliancepolicy'
-            'microsoft.intune.deviceconfigurationpolicy'
-            # + Purview core
-            'microsoft.purview.sensitivitylabel'
-            'microsoft.purview.labelpolicy'
-            'microsoft.purview.retentioncompliancepolicy'
+            # + Intune
+            'microsoft.intune.accountprotectionlocalusergroupmembershippolicy'
         )
     }
 }

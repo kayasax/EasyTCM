@@ -38,9 +38,20 @@ function Invoke-TCMGraphRequest {
         }
 
         # Handle collections with pagination
-        if ($response.value) {
+        # Check for .value key existence (not truthiness — empty arrays are valid)
+        $hasValue = $false
+        if ($response -is [System.Collections.IDictionary]) {
+            $hasValue = $response.ContainsKey('value')
+        }
+        elseif ($response.PSObject.Properties.Name -contains 'value') {
+            $hasValue = $true
+        }
+
+        if ($hasValue) {
             $results = [System.Collections.Generic.List[object]]::new()
-            $results.AddRange([object[]]$response.value)
+            if ($response.value) {
+                $results.AddRange([object[]]$response.value)
+            }
 
             if ($All) {
                 while ($response.'@odata.nextLink') {
@@ -60,19 +71,10 @@ function Invoke-TCMGraphRequest {
         $statusCode = $_.Exception.Response.StatusCode
         $errorBody  = $_.ErrorDetails.Message
 
-        if ($errorBody) {
-            try {
-                $parsed  = $errorBody | ConvertFrom-Json
-                $message = $parsed.error.message
-            }
-            catch {
-                $message = $errorBody
-            }
-        }
-        else {
-            $message = $_.Exception.Message
+        if (-not $errorBody) {
+            $errorBody = $_.Exception.Message
         }
 
-        Write-Error "TCM API error [$Method $Endpoint] ($statusCode): $message"
+        Write-Error "TCM API error [$Method $Endpoint] ($statusCode): $errorBody"
     }
 }

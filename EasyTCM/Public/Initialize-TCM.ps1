@@ -26,7 +26,7 @@ function Initialize-TCM {
     param(
         [string]$TenantId,
 
-        [ValidateSet('All', 'Entra', 'Exchange', 'Intune', 'Teams', 'Defender', 'Purview')]
+        [ValidateSet('All', 'Entra', 'Exchange', 'Intune', 'Teams')]
         [string[]]$Workloads = @('All'),
 
         [switch]$SkipPermissionGrant
@@ -72,11 +72,9 @@ function Initialize-TCM {
     # Define role mappings per workload
     $permissionsByWorkload = @{
         'Entra'    = @('User.Read.All', 'Policy.Read.All', 'Policy.ReadWrite.ConditionalAccess', 'RoleManagement.Read.Directory', 'Application.Read.All', 'Group.Read.All')
-        'Exchange' = @('Exchange.ManageAsApp')
+        'Exchange' = @('Organization.Read.All')
         'Intune'   = @('DeviceManagementConfiguration.Read.All')
         'Teams'    = @('Organization.Read.All')
-        'Defender' = @('SecurityEvents.Read.All')
-        'Purview'  = @('Exchange.ManageAsApp')
     }
 
     $targetWorkloads = if ($Workloads -contains 'All') { $permissionsByWorkload.Keys } else { $Workloads }

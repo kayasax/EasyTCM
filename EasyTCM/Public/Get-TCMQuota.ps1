@@ -24,24 +24,35 @@ function Get-TCMQuota {
     # Each monitor runs 4x/day; cost = resources * 4
     $dailyResourceUsage = 0
     $monitorDetails = foreach ($m in $monitors) {
-        $baseline = $null
-        try {
-            $baseline = Invoke-TCMGraphRequest -Endpoint "configurationMonitors/$($m.id)/baseline"
-        }
-        catch { }
+        # Handle both hashtable and PSObject property access
+        $monId   = if ($m -is [System.Collections.IDictionary]) { $m['id'] } else { $m.id }
+        $monName = if ($m -is [System.Collections.IDictionary]) { $m['displayName'] } else { $m.displayName }
+        $monStat = if ($m -is [System.Collections.IDictionary]) { $m['status'] } else { $m.status }
 
+        if (-not $monId) {
+            Write-Verbose "Skipping monitor with no ID: $($m | ConvertTo-Json -Depth 2 -Compress)"
+            continue
+        }
+
+        $baseline = $null
         $resourceCount = 0
-        if ($baseline.resources) {
-            $resourceCount = ($baseline.resources | Measure-Object).Count
+        try {
+            $baseline = Invoke-TCMGraphRequest -Endpoint "configurationMonitors/$monId/baseline"
+            if ($baseline.resources) {
+                $resourceCount = ($baseline.resources | Measure-Object).Count
+            }
+        }
+        catch {
+            Write-Verbose "Could not retrieve baseline for monitor $monId"
         }
 
         $dailyCost = $resourceCount * 4
         $dailyResourceUsage += $dailyCost
 
         [PSCustomObject]@{
-            MonitorName    = $m.displayName
-            MonitorId      = $m.id
-            Status         = $m.status
+            MonitorName    = $monName
+            MonitorId      = $monId
+            Status         = $monStat
             Resources      = $resourceCount
             DailyQuotaCost = $dailyCost
         }

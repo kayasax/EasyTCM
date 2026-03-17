@@ -19,16 +19,12 @@ function Get-TCMWorkloadResources {
             'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'
             'microsoft.entra.externalidentitypolicy'
             'microsoft.entra.grouplifecyclepolicy'
-            'microsoft.entra.identitygovernancelifecycleworkflow'
             'microsoft.entra.namedlocationpolicy'
             'microsoft.entra.roledefinition'
-            'microsoft.entra.rolemanagementpolicy'
-            'microsoft.entra.securitydefaultspolicy'
         )
         'Exchange' = @(
             'microsoft.exchange.accepteddomain'
             'microsoft.exchange.activesyncdeviceaccessrule'
-            'microsoft.exchange.addressbookpolicy'
             'microsoft.exchange.antiphishpolicy'
             'microsoft.exchange.antiphishrule'
             'microsoft.exchange.distributiongroup'
@@ -48,8 +44,6 @@ function Get-TCMWorkloadResources {
         )
         'Intune' = @(
             'microsoft.intune.accountprotectionlocalusergroupmembershippolicy'
-            'microsoft.intune.devicecompliancepolicy'
-            'microsoft.intune.deviceconfigurationpolicy'
         )
         'Teams' = @(
             'microsoft.teams.apppermissionpolicy'
@@ -61,18 +55,6 @@ function Get-TCMWorkloadResources {
             'microsoft.teams.meetingconfiguration'
             'microsoft.teams.meetingpolicy'
             'microsoft.teams.messagingpolicy'
-        )
-        'Defender' = @(
-            'microsoft.defender.safeattachmentpolicy'
-            'microsoft.defender.safelinkspolicy'
-        )
-        'Purview' = @(
-            'microsoft.purview.autosensitivitylabelpolicy'
-            'microsoft.purview.deviceconfigurationpolicy'
-            'microsoft.purview.labelpolicy'
-            'microsoft.purview.retentioncompliancepolicy'
-            'microsoft.purview.retentioncompliancerule'
-            'microsoft.purview.sensitivitylabel'
         )
     }
 }

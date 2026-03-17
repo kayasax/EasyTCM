@@ -34,7 +34,7 @@ function New-TCMSnapshot {
 
         [string[]]$Resources,
 
-        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams', 'Defender', 'Purview')]
+        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams')]
         [string[]]$Workloads,
 
         [switch]$Wait,
@@ -43,8 +43,8 @@ function New-TCMSnapshot {
     )
 
     if (-not $Resources -and -not $Workloads) {
-        # Default: snapshot everything
-        $Workloads = @('Entra', 'Exchange', 'Intune', 'Teams', 'Defender', 'Purview')
+        # Default: snapshot everything TCM currently supports
+        $Workloads = @('Entra', 'Exchange', 'Intune', 'Teams')
         Write-Host 'No workloads specified — snapshotting all workloads.' -ForegroundColor DarkGray
     }
 

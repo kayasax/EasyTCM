@@ -48,10 +48,10 @@ function Test-TCMConnection {
 
     # Check TCM API reachability
     try {
-        $monitors = Invoke-TCMGraphRequest -Endpoint 'configurationMonitors?$top=1' -ErrorAction Stop
+        $monitors = Invoke-TCMGraphRequest -Endpoint 'configurationMonitors' -All
         $result.TCMApiReachable = $true
-        if ($monitors -is [System.Collections.IList]) {
-            $result.MonitorCount = $monitors.Count
+        if ($monitors) {
+            $result.MonitorCount = @($monitors).Count
         }
     }
     catch {

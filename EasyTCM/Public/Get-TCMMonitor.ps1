@@ -23,7 +23,12 @@ function Get-TCMMonitor {
         if ($IncludeBaseline) {
             try {
                 $baseline = Invoke-TCMGraphRequest -Endpoint "configurationMonitors/$Id/baseline"
-                $monitor | Add-Member -NotePropertyName 'baseline' -NotePropertyValue $baseline -Force
+                if ($monitor -is [System.Collections.IDictionary]) {
+                    $monitor['baseline'] = $baseline
+                }
+                else {
+                    $monitor | Add-Member -NotePropertyName 'baseline' -NotePropertyValue $baseline -Force
+                }
             }
             catch {
                 Write-Warning "Could not retrieve baseline for monitor $Id"

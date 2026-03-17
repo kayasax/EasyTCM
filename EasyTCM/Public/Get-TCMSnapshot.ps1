@@ -20,10 +20,17 @@ function Get-TCMSnapshot {
     if ($Id) {
         $job = Invoke-TCMGraphRequest -Endpoint "configurationSnapshotJobs/$Id"
 
-        if ($IncludeContent -and $job.resourceLocation) {
+        $resLocation = if ($job -is [System.Collections.IDictionary]) { $job['resourceLocation'] } else { $job.resourceLocation }
+
+        if ($IncludeContent -and $resLocation) {
             try {
-                $content = Invoke-MgGraphRequest -Method GET -Uri $job.resourceLocation
-                $job | Add-Member -NotePropertyName 'snapshotContent' -NotePropertyValue $content -Force
+                $content = Invoke-MgGraphRequest -Method GET -Uri $resLocation
+                if ($job -is [System.Collections.IDictionary]) {
+                    $job['snapshotContent'] = $content
+                }
+                else {
+                    $job | Add-Member -NotePropertyName 'snapshotContent' -NotePropertyValue $content -Force
+                }
             }
             catch {
                 Write-Warning "Could not download snapshot content: $_"

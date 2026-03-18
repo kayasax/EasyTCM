@@ -8,11 +8,17 @@ function Get-TCMQuota {
         - 800 monitored resources/day
         - 20,000 snapshot resources/month
         - 12 visible snapshot jobs
+    .PARAMETER PassThru
+        Return the quota data as an object (for scripting). Without this, only the dashboard is shown.
     .EXAMPLE
         Get-TCMQuota
+    .EXAMPLE
+        $quota = Get-TCMQuota -PassThru
     #>
     [CmdletBinding()]
-    param()
+    param(
+        [switch]$PassThru
+    )
 
     Write-Host 'Calculating TCM quota usage...' -ForegroundColor Cyan
 
@@ -98,15 +104,17 @@ function Get-TCMQuota {
         $monitorDetails | Format-Table -AutoSize | Out-String | Write-Host -ForegroundColor DarkGray
     }
 
-    [PSCustomObject]@{
-        MonitorCount         = $monitorCount
-        MonitorLimit         = 30
-        DailyResourceUsage   = $dailyResourceUsage
-        DailyResourceLimit   = 800
-        SnapshotJobCount     = $snapJobCount
-        SnapshotJobLimit     = 12
-        SnapshotResources    = $snapshotResourceCount
-        MonthlySnapshotLimit = 20000
-        Monitors             = $monitorDetails
+    if ($PassThru) {
+        [PSCustomObject]@{
+            MonitorCount         = $monitorCount
+            MonitorLimit         = 30
+            DailyResourceUsage   = $dailyResourceUsage
+            DailyResourceLimit   = 800
+            SnapshotJobCount     = $snapJobCount
+            SnapshotJobLimit     = 12
+            SnapshotResources    = $snapshotResourceCount
+            MonthlySnapshotLimit = 20000
+            Monitors             = $monitorDetails
+        }
     }
 }

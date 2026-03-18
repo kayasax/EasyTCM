@@ -69,6 +69,7 @@ function Get-TCMMonitoringProfile {
             'microsoft.teams.meetingpolicy'
             'microsoft.teams.messagingpolicy'
             'microsoft.teams.apppermissionpolicy'
+            'microsoft.teams.meetingconfiguration'
             # + Intune
             'microsoft.intune.accountprotectionlocalusergroupmembershippolicy'
             # + Security & Compliance — data protection

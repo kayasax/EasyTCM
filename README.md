@@ -71,6 +71,16 @@ Get-TCMDrift | Format-Table Workload, ResourceType, Property, Expected, Actual
 Sync-TCMDriftToMaester
 ```
 
+### See it in action
+
+**Drift detected — property-level details:**
+
+![Get-TCMDrift output showing detected configuration drift](docs/images/get-tcm-drift.png)
+
+**Real-time quota dashboard:**
+
+![Get-TCMQuota showing monitor and resource usage](docs/images/get-tcm-quota.png)
+
 ---
 
 ## 📦 Installation
@@ -147,11 +157,15 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 | `Export-TCMDriftReport` | ⭐ **HTML dashboard** with quota bars, property-level diffs, admin portal deep links |
 | `Get-TCMQuota` | Real-time quota dashboard (monitors, resources, snapshots) |
 
+![EasyTCM HTML Drift Report](docs/images/drift-report.png)
+
 ### 🔗 Maester Bridge (North Star)
 
 | Cmdlet | Description |
 |---|---|
 | `Sync-TCMDriftToMaester` | Generate Maester-compatible drift suites — MT.1060 picks them up natively, zero Maester modification needed |
+
+![Maester MT.1060 detecting TCM drift](docs/images/maester-drift.png)
 
 ### 🔮 Planned
 

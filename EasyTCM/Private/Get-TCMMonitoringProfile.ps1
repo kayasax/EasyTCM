@@ -56,9 +56,10 @@ function Get-TCMMonitoringProfile {
             'microsoft.exchange.safeattachmentpolicy'
             'microsoft.exchange.safelinkspolicy'
             'microsoft.teams.federationconfiguration'
-            # + Role management
-            'microsoft.entra.roledefinition'
             # + Exchange org & connectors
+            # NOTE: roledefinition excluded — 100+ built-in roles consume massive quota.
+            #       Add manually if you have custom roles: -ExcludeResources to remove others,
+            #       or use Full profile with targeted exclusions.
             'microsoft.exchange.organizationconfig'
             'microsoft.exchange.inboundconnector'
             'microsoft.exchange.outboundconnector'

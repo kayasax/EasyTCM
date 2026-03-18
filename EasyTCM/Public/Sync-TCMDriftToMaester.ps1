@@ -182,10 +182,7 @@ function Sync-TCMDriftToMaester {
     }
 
     # Set the environment variable that MT.1060 uses for drift folder discovery.
-    # Note: Maester v2.0.0 MT1060Drift.tests.ps1 reads $env:MEASTER_FOLDER_DRIFT (typo).
-    # We set both spellings for forward-compatibility.
     $resolvedOutput = (Resolve-Path $OutputPath).Path
-    $env:MEASTER_FOLDER_DRIFT = $resolvedOutput
     $env:MAESTER_FOLDER_DRIFT = $resolvedOutput
 
     # Summary

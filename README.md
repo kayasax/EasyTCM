@@ -115,7 +115,6 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 |---|---|
 | **[Getting Started](docs/GETTING-STARTED.md)** | Step-by-step guide: install → setup → first monitor in 10 minutes |
 | [Product Vision & Roadmap](docs/VISION.md) | Where we're going and why |
-| [Launch Kit](docs/LAUNCH-KIT.md) | Blog post, social media copy, YouTube script |
 | [Contributing](CONTRIBUTING.md) | How to contribute cmdlets, templates, and fixes |
 | [Changelog](CHANGELOG.md) | Version history |
 

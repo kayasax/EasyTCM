@@ -53,94 +53,30 @@ EasyTCM sits in the **sweet spot**: broader than PIM-only tools, simpler than fu
 
 ## Launch Milestones
 
-### Milestone 1: MVP (v0.1.0) ← WE ARE HERE
-- [x] 14 cmdlets covering setup, snapshots, monitors, drift, Maester bridge
-- [x] Module loads and exports correctly
-- [x] Pester tests for module structure
-- [ ] **Validate against a live tenant** ← FIRST THING TO DO
-- [ ] Fix any API response format issues discovered during testing
+### Milestone 1: MVP (v0.1.0) — SHIPPED
+- [x] 15 cmdlets covering setup, snapshots, monitors, drift, reporting, Maester bridge
+- [x] Validated end-to-end against live tenant
+- [x] Real drift detection confirmed (IpRanges change on Named Location)
+- [x] Maester MT.1060 integration working
+- [x] HTML drift reports with admin portal deep links
+- [x] GitHub Actions CI + PSGallery publish workflow
 
-### Milestone 2: Publish-Ready (v0.2.0)
-- [ ] All cmdlets tested against live TCM API
-- [ ] `ConvertTo-TCMBaseline` confirmed with real snapshot data
-- [ ] `Sync-TCMDriftToMaester` generates valid Maester drift suites
-- [ ] GitHub Actions CI (lint + test on push)
-- [ ] PSGallery publish workflow
-- [ ] Getting Started guide with real terminal screenshots
-
-### Milestone 3: Public Launch (v0.3.0)
+### Milestone 2: Public Launch (v0.2.0)
 - [ ] Published to PSGallery
 - [ ] Blog post: "Introducing EasyTCM"
-- [ ] Twitter/X thread
-- [ ] LinkedIn post
-- [ ] Reddit: r/PowerShell, r/sysadmin, r/YOURM365
-- [ ] Maester community: open discussion proposing TCM bridge
-- [ ] YouTube short: 3-minute demo
-
-### Milestone 4: Community Growth (v0.5.0+)
 - [ ] CIS/CISA baseline templates
-- [ ] HTML drift reports with admin portal deep links
+- [ ] Community announcements (Reddit, Maester, Twitter/X, LinkedIn)
+
+### Milestone 3: Ecosystem (v0.3.0+)
 - [ ] Teams webhook notifications
+- [ ] Remediation script generation (`Repair-TCMDrift`)
+- [ ] Multi-tenant comparison (`Compare-TCMTenant`)
 - [ ] EntraExporter integration
-- [ ] Multi-tenant comparison
-- [ ] Contribution from community
+- [ ] Community contributions
 
 ---
 
-## What To Do RIGHT NOW
-
-### Step 1: Validate the MVP (30 min)
-```powershell
-# Connect to a test tenant
-Connect-MgGraph -Scopes 'Application.ReadWrite.All','AppRoleAssignment.ReadWrite.All','ConfigurationMonitoring.ReadWrite.All'
-
-# Run Initialize-TCM — does the SP get created?
-Initialize-TCM -TenantId $tenantId -Workloads Entra
-
-# Test connection
-Test-TCMConnection
-
-# Take a snapshot
-$snap = New-TCMSnapshot -DisplayName "First test" -Workloads Entra -Wait
-
-# Look at the snapshot content
-$snap = Get-TCMSnapshot -Id $snap.id -IncludeContent
-$snap.snapshotContent | ConvertTo-Json -Depth 5 | Out-File ./first-snapshot.json
-
-# Convert to baseline
-$baseline = $snap | ConvertTo-TCMBaseline
-
-# Create a monitor
-New-TCMMonitor -DisplayName "Test Monitor" -Baseline $baseline
-
-# Check quota
-Get-TCMQuota
-
-# Wait 6 hours... then check drifts
-Get-TCMDrift
-```
-
-### Step 2: Fix What Breaks (1-2 hours)
-The snapshot content format from the real API will likely differ from our assumptions. Adjust `ConvertTo-TCMBaseline` and `Sync-TCMDriftToMaester` based on actual data.
-
-### Step 3: Record a Demo (30 min)
-Screen-record the Step 1 workflow. This becomes:
-- The README GIF
-- The YouTube short
-- The blog post screenshots
-
-### Step 4: Publish to PSGallery
-```powershell
-Publish-Module -Path ./EasyTCM -NuGetApiKey $apiKey
-```
-(or use the GitHub Actions workflow we're about to create)
-
-### Step 5: Announce
-Post the blog + social using the launch kit materials below.
-
----
-
-## Key Messages for All Communications
+## Key Messages
 
 1. **"TCM is the future of M365 configuration management. EasyTCM makes it accessible today."**
 2. **"Snap → Monitor → Report. Three steps to continuous tenant monitoring."**
@@ -156,5 +92,4 @@ Post the blog + social using the launch kit materials below.
 | TCM API changes before GA | Pin to known beta version; abstract API calls behind private helpers |
 | Low adoption (TCM too new) | Piggyback on Maester's existing community via the bridge feature |
 | Maester team rejects bridge approach | Bridge works standalone; no Maester dependency required |
-| Snapshot content format differs from expectation | First priority: validate against real tenant |
 | Microsoft ships their own PowerShell module | We move faster; community UX beats official SDK |

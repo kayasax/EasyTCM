@@ -111,17 +111,26 @@ function Sync-TCMDriftToMaester {
                 # Flatten array properties to space-joined strings so Maester's
                 # Compare-MtJsonObject does string comparison (shows actual values)
                 # instead of ArraySizeMismatch (shows only counts).
+                # Nested object arrays get JSON-serialized to preserve structure.
                 $flatProps = @{}
                 if ($resProps -is [System.Collections.IDictionary]) {
                     foreach ($pk in $resProps.Keys) {
                         $val = $resProps[$pk]
-                        if ($val -is [Array]) { $flatProps[$pk] = $val -join ' ' } else { $flatProps[$pk] = $val }
+                        if ($val -is [Array] -and $val.Count -gt 0 -and ($val[0] -is [System.Collections.IDictionary] -or $val[0] -is [PSCustomObject])) {
+                            $flatProps[$pk] = ($val | ConvertTo-Json -Depth 10 -Compress)
+                        }
+                        elseif ($val -is [Array]) { $flatProps[$pk] = $val -join ' ' }
+                        else { $flatProps[$pk] = $val }
                     }
                 }
                 elseif ($resProps) {
                     foreach ($prop in $resProps.PSObject.Properties) {
                         $val = $prop.Value
-                        if ($val -is [Array]) { $flatProps[$prop.Name] = $val -join ' ' } else { $flatProps[$prop.Name] = $val }
+                        if ($val -is [Array] -and $val.Count -gt 0 -and ($val[0] -is [System.Collections.IDictionary] -or $val[0] -is [PSCustomObject])) {
+                            $flatProps[$prop.Name] = ($val | ConvertTo-Json -Depth 10 -Compress)
+                        }
+                        elseif ($val -is [Array]) { $flatProps[$prop.Name] = $val -join ' ' }
+                        else { $flatProps[$prop.Name] = $val }
                     }
                 }
                 $key = "${resType}::${resDn}"

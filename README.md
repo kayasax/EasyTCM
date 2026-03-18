@@ -179,7 +179,7 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 ## 📊 TCM Workload Coverage
 
-EasyTCM wraps TCM's workload support (38 validated resource types):
+EasyTCM wraps TCM's workload support (62 validated resource types):
 
 | Workload | Types | Examples |
 |---|---|---|
@@ -187,8 +187,7 @@ EasyTCM wraps TCM's workload support (38 validated resource types):
 | **Microsoft Exchange** | 18 | Transport Rules, Accepted Domains, Anti-phishing, Anti-spam, DKIM, Connectors |
 | **Microsoft Intune** | 1 | Device Configuration |
 | **Microsoft Teams** | 9 | Meeting Policies, Messaging Policies, Federation, App Permission Policies |
-
-> **Note:** Defender and Purview workloads are defined in the TCM schema but their resource types are currently rejected by the API (as of March 2026). They will be added when Microsoft enables them.
+| **Security & Compliance** | 24 | DLP Policies, Retention Policies, Sensitivity Labels, Compliance Tags, Case Hold, Supervision |
 
 Full resource type list: [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json)
 
@@ -248,7 +247,7 @@ $baseline = $snapshot | ConvertTo-TCMBaseline -Profile Full
 - [x] Pester unit tests
 
 ### 🏗️ Phase 2 — Validate & Report (v0.2.0) — IN PROGRESS
-- [x] ✅ Validate all cmdlets against live TCM tenant (38 resource types across 4 workloads)
+- [x] ✅ Validate all cmdlets against live TCM tenant (62 resource types across 5 workloads)
 - [x] ✅ Refine `ConvertTo-TCMBaseline` with real snapshot data + monitoring profiles
 - [x] ✅ `Export-TCMDriftReport` — HTML dashboard with quota bars, property diffs, admin portal deep links
 - [x] ✅ `Get-TCMMonitoringResult` — monitor cycle visibility (hidden `configurationMonitoringResults` endpoint)

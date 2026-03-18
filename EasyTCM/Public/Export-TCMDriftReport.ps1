@@ -89,6 +89,9 @@ function Export-TCMDriftReport {
         'microsoft.exchange.transportrule'                           = 'https://admin.exchange.microsoft.com/#/transportrules'
         'microsoft.exchange.accepteddomain'                          = 'https://admin.exchange.microsoft.com/#/accepteddomains'
         'microsoft.teams.meetingpolicy'                              = 'https://admin.teams.microsoft.com/policies/meetings'
+        'microsoft.securityandcompliance.dlpcompliancepolicy'            = 'https://compliance.microsoft.com/datalossprevention'
+        'microsoft.securityandcompliance.retentioncompliancepolicy'      = 'https://compliance.microsoft.com/informationgovernance'
+        'microsoft.securityandcompliance.labelpolicy'                    = 'https://compliance.microsoft.com/informationprotection'
     }
 
     # Build HTML

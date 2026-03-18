@@ -10,7 +10,7 @@ function Get-TCMMonitoringProfile {
         Profiles:
         - SecurityCritical: ~15 types — identity, access control, mail security
         - Recommended:      ~30 types — SecurityCritical + compliance & device policies
-        - Full:             ~52 types — everything (likely to exceed quota)
+        - Full:             ~62 types — everything (likely to exceed quota)
     #>
     [CmdletBinding()]
     param()
@@ -70,6 +70,13 @@ function Get-TCMMonitoringProfile {
             'microsoft.teams.apppermissionpolicy'
             # + Intune
             'microsoft.intune.accountprotectionlocalusergroupmembershippolicy'
+            # + Security & Compliance — data protection
+            'microsoft.securityandcompliance.dlpcompliancepolicy'
+            'microsoft.securityandcompliance.dlpcompliancerule'
+            'microsoft.securityandcompliance.retentioncompliancepolicy'
+            'microsoft.securityandcompliance.retentioncompliancerule'
+            'microsoft.securityandcompliance.labelpolicy'
+            'microsoft.securityandcompliance.compliancetag'
         )
     }
 }

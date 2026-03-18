@@ -56,5 +56,31 @@ function Get-TCMWorkloadResources {
             'microsoft.teams.meetingpolicy'
             'microsoft.teams.messagingpolicy'
         )
+        'SecurityAndCompliance' = @(
+            'microsoft.securityandcompliance.autosensitivitylabelpolicy'
+            'microsoft.securityandcompliance.caseholdpolicy'
+            'microsoft.securityandcompliance.caseholdrule'
+            'microsoft.securityandcompliance.compliancecase'
+            'microsoft.securityandcompliance.compliancesearch'
+            'microsoft.securityandcompliance.compliancesearchaction'
+            'microsoft.securityandcompliance.compliancetag'
+            'microsoft.securityandcompliance.deviceconditionalaccesspolicy'
+            'microsoft.securityandcompliance.deviceconfigurationpolicy'
+            'microsoft.securityandcompliance.dlpcompliancepolicy'
+            'microsoft.securityandcompliance.fileplanpropertyauthority'
+            'microsoft.securityandcompliance.fileplanpropertycategory'
+            'microsoft.securityandcompliance.fileplanpropertycitation'
+            'microsoft.securityandcompliance.fileplanpropertydepartment'
+            'microsoft.securityandcompliance.fileplanpropertyreferenceid'
+            'microsoft.securityandcompliance.fileplanpropertysubcategory'
+            'microsoft.securityandcompliance.labelpolicy'
+            'microsoft.securityandcompliance.protectionalert'
+            'microsoft.securityandcompliance.retentioncompliancepolicy'
+            'microsoft.securityandcompliance.retentioncompliancerule'
+            'microsoft.securityandcompliance.retentioneventtype'
+            'microsoft.securityandcompliance.securityfilter'
+            'microsoft.securityandcompliance.supervisoryreviewpolicy'
+            'microsoft.securityandcompliance.supervisoryreviewrule'
+        )
     }
 }

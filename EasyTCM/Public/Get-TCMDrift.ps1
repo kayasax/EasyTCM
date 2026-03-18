@@ -25,7 +25,7 @@ function Get-TCMDrift {
         [ValidateSet('active', 'fixed', 'all')]
         [string]$Status = 'active',
 
-        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams')]
+        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams', 'SecurityAndCompliance')]
         [string]$Workload
     )
 

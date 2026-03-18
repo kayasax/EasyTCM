@@ -1,8 +1,9 @@
 name: Publish to PowerShell Gallery
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - 'v*'
 
 permissions:
   contents: read
@@ -23,10 +24,10 @@ jobs:
           Write-Host "Module: $($manifest.Name) v$($manifest.Version)"
           Write-Host "Functions: $($manifest.ExportedFunctions.Keys -join ', ')"
 
-          # Ensure version matches the release tag
-          $tagVersion = '${{ github.event.release.tag_name }}' -replace '^v', ''
+          # Ensure version matches the tag
+          $tagVersion = '${{ github.ref_name }}' -replace '^v', ''
           if ($manifest.Version.ToString() -ne $tagVersion) {
-              throw "Module version ($($manifest.Version)) does not match release tag ($tagVersion). Update EasyTCM.psd1 first."
+              throw "Module version ($($manifest.Version)) does not match tag ($tagVersion). Update EasyTCM.psd1 first."
           }
           Write-Host "Version match confirmed: $tagVersion" -ForegroundColor Green
 

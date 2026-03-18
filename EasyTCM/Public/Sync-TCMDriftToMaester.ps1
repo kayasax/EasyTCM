@@ -108,11 +108,27 @@ function Sync-TCMDriftToMaester {
                 $resType = if ($res -is [System.Collections.IDictionary]) { $res['resourceType'] } else { $res.resourceType }
                 $resDn = if ($res -is [System.Collections.IDictionary]) { $res['displayName'] } else { $res.displayName }
                 $resProps = if ($res -is [System.Collections.IDictionary]) { $res['properties'] } else { $res.properties }
+                # Flatten array properties to space-joined strings so Maester's
+                # Compare-MtJsonObject does string comparison (shows actual values)
+                # instead of ArraySizeMismatch (shows only counts).
+                $flatProps = @{}
+                if ($resProps -is [System.Collections.IDictionary]) {
+                    foreach ($pk in $resProps.Keys) {
+                        $val = $resProps[$pk]
+                        if ($val -is [Array]) { $flatProps[$pk] = $val -join ' ' } else { $flatProps[$pk] = $val }
+                    }
+                }
+                elseif ($resProps) {
+                    foreach ($prop in $resProps.PSObject.Properties) {
+                        $val = $prop.Value
+                        if ($val -is [Array]) { $flatProps[$prop.Name] = $val -join ' ' } else { $flatProps[$prop.Name] = $val }
+                    }
+                }
                 $key = "${resType}::${resDn}"
                 $baselineData[$key] = @{
                     resourceType = $resType
                     displayName  = $resDn
-                    properties   = $resProps
+                    properties   = $flatProps
                 }
             }
         }

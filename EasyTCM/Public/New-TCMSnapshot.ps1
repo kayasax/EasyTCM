@@ -34,7 +34,7 @@ function New-TCMSnapshot {
 
         [string[]]$Resources,
 
-        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams')]
+        [ValidateSet('Entra', 'Exchange', 'Intune', 'Teams', 'SecurityAndCompliance')]
         [string[]]$Workloads,
 
         [switch]$Wait,
@@ -42,9 +42,13 @@ function New-TCMSnapshot {
         [int]$TimeoutSeconds = 300
     )
 
+    if ($DisplayName -notmatch '^[a-zA-Z0-9 ]+$') {
+        throw "DisplayName contains invalid characters. Only alphabets, numbers, and spaces are allowed."
+    }
+
     if (-not $Resources -and -not $Workloads) {
         # Default: snapshot everything TCM currently supports
-        $Workloads = @('Entra', 'Exchange', 'Intune', 'Teams')
+        $Workloads = @('Entra', 'Exchange', 'Intune', 'Teams', 'SecurityAndCompliance')
         Write-Host 'No workloads specified — snapshotting all workloads.' -ForegroundColor DarkGray
     }
 

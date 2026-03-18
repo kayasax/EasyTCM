@@ -62,6 +62,8 @@ Initialize-TCM
 ```
 
 > **Note:** You only need to run `Initialize-TCM` once per tenant. After that, use `Test-TCMConnection` to verify.
+>
+> **Security & Compliance workload:** `Initialize-TCM` automatically grants `Exchange.ManageAsApp` and assigns the `Compliance Administrator` directory role to the TCM service principal. These are required for SC resource types (DLP, retention, sensitivity labels, etc.).
 
 ## Step 4: Snapshot Your Current Configuration
 
@@ -72,8 +74,8 @@ $snapshot = New-TCMSnapshot -DisplayName "My first snapshot" -Wait
 # The -Wait flag polls until the snapshot completes
 # Output:
 # No workloads specified — snapshotting all workloads.
-# Creating snapshot 'My first snapshot' with 38 resource types...
-#   (Entra: 10, Exchange: 18, Intune: 1, Teams: 9)
+# Creating snapshot 'My first snapshot' with 62 resource types...
+#   (Entra: 10, Exchange: 18, Intune: 1, Teams: 9, SecurityAndCompliance: 24)
 #   Status: running — waiting 10s...
 #   Status: running — waiting 10s...
 # Snapshot completed successfully.

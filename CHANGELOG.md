@@ -5,7 +5,21 @@ All notable changes to EasyTCM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.2.0] - 2026-03-18
+
+### Added
+- **Security & Compliance workload** — 24 new resource types including DLP policies, retention policies, sensitivity labels, compliance tags, case holds, and supervisory review
+- Display name validation in `New-TCMSnapshot` — API now rejects non-alphanumeric characters (only letters, numbers, and spaces allowed)
+- `Initialize-TCM` auto-grants `Exchange.ManageAsApp` and `Compliance Administrator` directory role for SC workload
+- Recommended monitoring profile expanded with 3 additional SC types: `dlpcompliancerule`, `retentioncompliancerule`, `compliancetag` (now 30 types)
+- `Get-TCMMonitor` now shows baseline summary by default: resource count, workload breakdown, and monitored types — answers "what am I monitoring?" at a glance
+- New `MonitoredTypes` property on monitor output — pipe to `Select-Object -ExpandProperty MonitoredTypes` for the full list
+- `-SkipBaseline` switch on `Get-TCMMonitor` for raw API output without baseline fetch
+
+### Changed
+- Total validated resource types: 38 → 62 across 5 workloads (was 4)
+- `New-TCMSnapshot`, `Get-TCMDrift`, `Initialize-TCM` now accept `SecurityAndCompliance` workload
+- Recommended profile: 27 → 30 types (6 SC types total)
 
 ## [0.1.0] - 2026-03-17
 

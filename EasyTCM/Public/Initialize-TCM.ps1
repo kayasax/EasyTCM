@@ -26,7 +26,7 @@ function Initialize-TCM {
     param(
         [string]$TenantId,
 
-        [ValidateSet('All', 'Entra', 'Exchange', 'Intune', 'Teams')]
+        [ValidateSet('All', 'Entra', 'Exchange', 'Intune', 'Teams', 'SecurityAndCompliance')]
         [string[]]$Workloads = @('All'),
 
         [switch]$SkipPermissionGrant
@@ -71,10 +71,11 @@ function Initialize-TCM {
 
     # Define role mappings per workload
     $permissionsByWorkload = @{
-        'Entra'    = @('User.Read.All', 'Policy.Read.All', 'Policy.ReadWrite.ConditionalAccess', 'RoleManagement.Read.Directory', 'Application.Read.All', 'Group.Read.All')
-        'Exchange' = @('Organization.Read.All')
-        'Intune'   = @('DeviceManagementConfiguration.Read.All')
-        'Teams'    = @('Organization.Read.All')
+        'Entra'                  = @('User.Read.All', 'Policy.Read.All', 'Policy.ReadWrite.ConditionalAccess', 'RoleManagement.Read.Directory', 'Application.Read.All', 'Group.Read.All')
+        'Exchange'               = @('Organization.Read.All')
+        'Intune'                 = @('DeviceManagementConfiguration.Read.All')
+        'Teams'                  = @('Organization.Read.All')
+        'SecurityAndCompliance'  = @('Organization.Read.All')  # Also requires Compliance Administrator directory role
     }
 
     $targetWorkloads = if ($Workloads -contains 'All') { $permissionsByWorkload.Keys } else { $Workloads }
@@ -111,6 +112,53 @@ function Initialize-TCM {
             Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments" -Body $assignBody -ContentType 'application/json' | Out-Null
             Write-Host "  Granted '$roleName'" -ForegroundColor Green
             $grantedCount++
+        }
+    }
+
+    # Grant Exchange.ManageAsApp for SecurityAndCompliance workload
+    if ($targetWorkloads -contains 'SecurityAndCompliance') {
+        Write-Host '  Granting Exchange.ManageAsApp for Security & Compliance...' -ForegroundColor Cyan
+        $exoSp = (Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '00000002-0000-0ff1-ce00-000000000000'").value[0]
+        $manageAsApp = $exoSp.appRoles | Where-Object { $_.value -eq 'Exchange.ManageAsApp' }
+        if ($manageAsApp) {
+            $existingExo = $null
+            try { $existingExo = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments?`$filter=appRoleId eq '$($manageAsApp.id)'" } catch { }
+            if ($existingExo.value -and $existingExo.value.Count -gt 0) {
+                Write-Host "  Exchange.ManageAsApp already granted" -ForegroundColor DarkGray
+            }
+            elseif ($PSCmdlet.ShouldProcess('Exchange.ManageAsApp', 'Grant to TCM SP')) {
+                $exoBody = @{ principalId = $tcmSp.id; resourceId = $exoSp.id; appRoleId = $manageAsApp.id } | ConvertTo-Json
+                Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments" -Body $exoBody -ContentType 'application/json' | Out-Null
+                Write-Host "  Granted 'Exchange.ManageAsApp'" -ForegroundColor Green
+                $grantedCount++
+            }
+        }
+
+        # Assign Compliance Administrator directory role
+        Write-Host '  Assigning Compliance Administrator role...' -ForegroundColor Cyan
+        $dirRoles = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/directoryRoles"
+        $compAdmin = $dirRoles.value | Where-Object { $_.displayName -eq 'Compliance Administrator' }
+        if (-not $compAdmin) {
+            $templates = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/directoryRoleTemplates"
+            $compTemplate = $templates.value | Where-Object { $_.displayName -eq 'Compliance Administrator' }
+            if ($compTemplate) {
+                $compAdmin = Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/directoryRoles" -Body (@{ roleTemplateId = $compTemplate.id } | ConvertTo-Json) -ContentType 'application/json'
+            }
+        }
+        if ($compAdmin) {
+            $memberCheck = $null
+            try { $memberCheck = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/directoryRoles/$($compAdmin.id)/members?`$filter=id eq '$($tcmSp.id)'" } catch { }
+            if ($memberCheck.value -and $memberCheck.value.Count -gt 0) {
+                Write-Host "  Compliance Administrator already assigned" -ForegroundColor DarkGray
+            }
+            elseif ($PSCmdlet.ShouldProcess('Compliance Administrator', 'Assign to TCM SP')) {
+                $refBody = @{ "@odata.id" = "https://graph.microsoft.com/v1.0/directoryObjects/$($tcmSp.id)" } | ConvertTo-Json
+                Invoke-MgGraphRequest -Method POST -Uri "https://graph.microsoft.com/v1.0/directoryRoles/$($compAdmin.id)/members/`$ref" -Body $refBody -ContentType 'application/json' | Out-Null
+                Write-Host "  Assigned 'Compliance Administrator' directory role" -ForegroundColor Green
+            }
+        }
+        else {
+            Write-Warning "  Could not find or activate 'Compliance Administrator' directory role"
         }
     }
 

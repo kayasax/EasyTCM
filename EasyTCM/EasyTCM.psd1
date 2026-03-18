@@ -16,7 +16,7 @@
     Author            = 'Loic MICHEL'
 
     # Company or vendor of this module
-    CompanyName       = 'Community'
+    #CompanyName       = 'Community'
 
     # Copyright statement for this module
     Copyright         = '(c) 2026 Loic MICHEL. All rights reserved. MIT License.'

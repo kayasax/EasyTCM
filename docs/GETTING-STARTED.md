@@ -152,7 +152,21 @@ Get-TCMQuota
 #   Snapshot Resources:  ~13 / 20,000 (visible jobs only)
 ```
 
-## Step 9 (Optional): Bridge to Maester
+## Step 9: Generate an HTML Report
+
+```powershell
+# Generate a drift report and open it in your browser
+Export-TCMDriftReport -Open
+
+# Or save to a specific path
+Export-TCMDriftReport -OutputPath "./reports/drift-report.html"
+```
+
+The report shows a full dashboard: monitor status, quota usage with progress bars, active drifts with property-level detail (expected vs actual), baseline resource inventory, and **deep links to the relevant admin portal** (Entra, Exchange, Teams) for each resource type.
+
+Works even with zero drifts — use it as a status dashboard.
+
+## Step 10 (Optional): Bridge to Maester
 
 If you use [Maester](https://maester.dev/) for M365 security testing:
 
@@ -161,20 +175,36 @@ If you use [Maester](https://maester.dev/) for M365 security testing:
 Install-Module Maester -Scope CurrentUser -Force
 
 # Create a Maester test folder and install default tests
-md maester-tests
+mkdir maester-tests
 cd maester-tests
 Install-MaesterTests
 
-# Sync TCM drifts into Maester's drift folder — MT.1060 picks them up natively
-Sync-TCMDriftToMaester -OutputPath './tests/Maester/Drift'
+# Sync TCM drifts into Maester's drift folder
+# This also sets the environment variable MT.1060 needs for discovery
+Sync-TCMDriftToMaester -OutputPath './Maester/Drift'
 
-# Now run Maester normally — MT.1060 auto-discovers TCM drift suites
+# Connect with Maester's required scopes
+Connect-Maester
+
+# Run just the drift tests
+Invoke-Maester -Path './Maester/Drift/'
+
+# Or run ALL Maester tests (400+ security checks + drift)
 Invoke-Maester
 ```
 
-**How it works:** `Sync-TCMDriftToMaester` writes `baseline.json` + `current.json` into `./tests/Maester/Drift/TCM-<MonitorName>/`. Maester's MT.1060 test (shipped in v2.0+, Aug 2025) auto-discovers any subfolder with that structure and compares them. Zero Maester modifications needed.
+**How it works:**
+1. `Sync-TCMDriftToMaester` writes `baseline.json` + `current.json` into `./Maester/Drift/TCM-<MonitorName>/`
+2. It sets the `$env:MEASTER_FOLDER_DRIFT` environment variable that MT.1060 needs
+3. Maester's MT.1060 test auto-discovers drift suites and compares baseline vs current
+4. If TCM detected drift → Maester test **fails** with property-level detail in Maester's HTML report
+5. If no drift → Maester test **passes**
 
-No drifts yet? That's good — it means your tenant config hasn't changed since the snapshot. To test the integration, make a minor change (e.g., rename a Named Location in Entra portal), wait for the next 6-hour TCM cycle, then re-sync.
+Zero Maester modifications needed. The sync is **not automatic** — run `Sync-TCMDriftToMaester` before `Invoke-Maester` to get fresh data.
+
+> **Note:** The HTML report (`Export-TCMDriftReport`) and Maester integration (`Sync-TCMDriftToMaester`) are independent. Use one or both depending on your workflow.
+
+No drifts yet? That's good — it means your tenant config hasn't changed since the snapshot. To test the integration, modify an existing Named Location or CA policy in the Entra portal, wait for the next 6-hour TCM cycle, then re-sync.
 
 ---
 
@@ -185,6 +215,17 @@ No drifts yet? That's good — it means your tenant config hasn't changed since 
 Test-TCMConnection      # Am I connected?
 Get-TCMQuota            # What's my usage?
 Get-TCMDrift            # Any active drifts?
+Export-TCMDriftReport -Open   # Full HTML dashboard
+```
+
+### Daily Review (Maester + EasyTCM)
+```powershell
+Connect-MgGraph -Scopes 'Policy.Read.All','Organization.Read.All'
+Import-Module EasyTCM
+Sync-TCMDriftToMaester -OutputPath 'D:\maester-tests\Maester\Drift'
+cd D:\maester-tests
+Connect-Maester
+Invoke-Maester
 ```
 
 ### Monitor a New Workload
@@ -211,7 +252,9 @@ Get-TCMMonitor | Format-Table displayName, status, monitorRunFrequencyInHours, c
 |---------|----------|
 | `Initialize-TCM` fails | Ensure you have Application Admin + Security Admin roles, or Global Admin |
 | Snapshot stuck in "running" | TCM processes asynchronously. Wait a few minutes, or check errors: `(Get-TCMSnapshot -Id $id).errorDetails` |
-| No drifts after creating monitor | Monitors run at fixed 6h intervals (6 AM, 12 PM, 6 PM, 12 AM GMT). Wait for the next cycle. |
+| No drifts after creating monitor | Monitors run at fixed 6h intervals (6 AM, 12 PM, 6 PM, 12 AM UTC). Check cycle status with `Get-TCMMonitoringResult -Last 1`. |
+| Can't tell if monitor is running | `Get-TCMMonitoringResult` shows cycle timing, status, and drift counts. If empty, the first cycle hasn't run yet. |
+| New settings not detected as drift | TCM only monitors changes to resources that existed in the baseline. New tenant additions are **not** detected. |
 | `Test-TCMConnection` shows `TCMApiReachable: False` | Permissions may take a few minutes to propagate after `Initialize-TCM`. Ensure you connected with Graph scopes like `Policy.Read.All`, `Organization.Read.All`, etc. |
 | Quota exceeded | Use `Get-TCMQuota` to see usage. Reduce resources per monitor or delete unused monitors/snapshots. |
 

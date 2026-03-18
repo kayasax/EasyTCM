@@ -117,8 +117,13 @@ function Sync-TCMDriftToMaester {
             }
         }
 
-        # Build "current" by applying drift deltas to baseline
-        $currentData = $baselineData.Clone()
+        # Build "current" by deep-copying baseline and applying drift deltas
+        # NOTE: .Clone() is shallow — nested properties would be shared references.
+        # Deep copy via JSON roundtrip to avoid mutating baselineData.
+        $currentData = @{}
+        foreach ($k in $baselineData.Keys) {
+            $currentData[$k] = $baselineData[$k] | ConvertTo-Json -Depth 20 | ConvertFrom-Json -AsHashtable
+        }
         $monitorDrifts = @($drifts | Where-Object { $_.MonitorId -eq $monId })
 
         foreach ($drift in $monitorDrifts) {
@@ -149,8 +154,8 @@ function Sync-TCMDriftToMaester {
         $baselineFile = Join-Path $suitePath 'baseline.json'
         $currentFile  = Join-Path $suitePath 'current.json'
 
-        $baselineData.Values | ConvertTo-Json -Depth 20 | Set-Content -Path $baselineFile -Encoding utf8
-        $currentData.Values  | ConvertTo-Json -Depth 20 | Set-Content -Path $currentFile -Encoding utf8
+        $baselineData | ConvertTo-Json -Depth 20 | Set-Content -Path $baselineFile -Encoding utf8
+        $currentData  | ConvertTo-Json -Depth 20 | Set-Content -Path $currentFile -Encoding utf8
 
         # Write settings.json for MT.1060 (optional metadata)
         $settingsFile = Join-Path $suitePath 'settings.json'

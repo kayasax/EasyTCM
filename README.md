@@ -111,7 +111,7 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 ---
 
-## 🎯 Cmdlets — v0.1.0 (14 shipped)
+## 🎯 Cmdlets — v0.1.0 (15 shipped)
 
 ### Setup & Authentication
 
@@ -138,12 +138,13 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 | `Update-TCMMonitor` | Update a monitor's baseline (⚠️ deletes existing drifts) |
 | `Remove-TCMMonitor` | Delete a monitor |
 
-### Drift Detection & Quota
+### Drift Detection, Reporting & Quota
 
 | Cmdlet | Description |
 |---|---|
 | `Get-TCMDrift` | Enriched drifts with workload classification, filtering |
-| `Get-TCMMonitoringResult` | Per-monitor cycle results |
+| `Get-TCMMonitoringResult` | Monitor cycle results — run status, timing, drift counts, next-run estimate |
+| `Export-TCMDriftReport` | ⭐ **HTML dashboard** with quota bars, property-level diffs, admin portal deep links |
 | `Get-TCMQuota` | Real-time quota dashboard (monitors, resources, snapshots) |
 
 ### 🔗 Maester Bridge (North Star)
@@ -152,11 +153,10 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 |---|---|
 | `Sync-TCMDriftToMaester` | Generate Maester-compatible drift suites — MT.1060 picks them up natively, zero Maester modification needed |
 
-### 🔮 Planned (Not Yet Implemented)
+### 🔮 Planned
 
 | Cmdlet | Target | Description |
 |---|---|---|
-| `Export-TCMDriftReport` | v0.2 | HTML/PDF drift report with admin portal deep links |
 | `Repair-TCMDrift` | v0.3 | Generate remediation scripts from detected drifts |
 | `Compare-TCMTenant` | v0.3 | Compare configurations across two tenants |
 | Baseline Templates | v0.2 | CIS/CISA pre-built baselines via `-Template` parameter |
@@ -165,16 +165,16 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 ## 📊 TCM Workload Coverage
 
-EasyTCM wraps TCM's full workload support:
+EasyTCM wraps TCM's workload support (38 validated resource types):
 
-| Workload | Examples |
-|---|---|
-| **Microsoft Entra** | Conditional Access policies, Administrative Units, Auth Methods, Cross-tenant Access, Named Locations |
-| **Microsoft Exchange** | Transport Rules, Accepted Domains, Anti-phishing, Anti-spam, DKIM, Connectors, Mailbox settings |
-| **Microsoft Intune** | Device Compliance, Configuration Profiles, App Protection, Endpoint Security |
-| **Microsoft Teams** | Meeting Policies, Messaging Policies, Federation, App Permission Policies |
-| **Microsoft Defender** | Safe Attachments, Safe Links, Anti-phishing policies |
-| **Microsoft Purview** | Sensitivity Labels, Retention Policies, DLP Policies, Compliance Policies |
+| Workload | Types | Examples |
+|---|---|---|
+| **Microsoft Entra** | 10 | Conditional Access, Auth Methods, Named Locations, Cross-tenant Access, Authorization Policy |
+| **Microsoft Exchange** | 18 | Transport Rules, Accepted Domains, Anti-phishing, Anti-spam, DKIM, Connectors |
+| **Microsoft Intune** | 1 | Device Configuration |
+| **Microsoft Teams** | 9 | Meeting Policies, Messaging Policies, Federation, App Permission Policies |
+
+> **Note:** Defender and Purview workloads are defined in the TCM schema but their resource types are currently rejected by the API (as of March 2026). They will be added when Microsoft enables them.
 
 Full resource type list: [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json)
 
@@ -234,9 +234,10 @@ $baseline = $snapshot | ConvertTo-TCMBaseline -Profile Full
 - [x] Pester unit tests
 
 ### 🏗️ Phase 2 — Validate & Report (v0.2.0) — IN PROGRESS
-- [ ] Validate all cmdlets against live TCM tenant
-- [ ] Refine `ConvertTo-TCMBaseline` with real snapshot data
-- [ ] `Export-TCMDriftReport` — HTML reports with admin portal deep links
+- [x] ✅ Validate all cmdlets against live TCM tenant (38 resource types across 4 workloads)
+- [x] ✅ Refine `ConvertTo-TCMBaseline` with real snapshot data + monitoring profiles
+- [x] ✅ `Export-TCMDriftReport` — HTML dashboard with quota bars, property diffs, admin portal deep links
+- [x] ✅ `Get-TCMMonitoringResult` — monitor cycle visibility (hidden `configurationMonitoringResults` endpoint)
 - [ ] Teams adaptive card notifications
 - [ ] CIS/CISA baseline templates
 - [ ] Publish to PSGallery

@@ -39,7 +39,7 @@ function Initialize-TCM {
     try {
         $existingSp = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals?`$filter=appId eq '$script:TCM_APP_ID'"
     }
-    catch { }
+    catch { Write-Debug "Service principal lookup failed: $_" }
 
     if ($existingSp.value -and $existingSp.value.Count -gt 0) {
         $tcmSp = $existingSp.value[0]
@@ -94,7 +94,7 @@ function Initialize-TCM {
         try {
             $existing = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments?`$filter=appRoleId eq '$($appRole.id)'"
         }
-        catch { }
+        catch { Write-Debug "App role assignment lookup failed: $_" }
 
         if ($existing.value -and $existing.value.Count -gt 0) {
             Write-Host "  Permission '$roleName' already granted" -ForegroundColor DarkGray

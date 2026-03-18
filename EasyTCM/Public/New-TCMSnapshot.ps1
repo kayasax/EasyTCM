@@ -25,7 +25,7 @@ function New-TCMSnapshot {
     .EXAMPLE
         New-TCMSnapshot -DisplayName "CA Policies" -Resources 'microsoft.entra.conditionalaccesspolicy' -Wait
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$DisplayName,
@@ -61,6 +61,7 @@ function New-TCMSnapshot {
     }
     if ($Description) { $body.description = $Description }
 
+    if (-not $PSCmdlet.ShouldProcess($DisplayName, 'Create TCM snapshot')) { return }
     Write-Host "Creating snapshot '$DisplayName' with $($Resources.Count) resource types..." -ForegroundColor Cyan
     $job = Invoke-TCMGraphRequest -Endpoint 'configurationSnapshots/createSnapshot' -Method POST -Body $body
 

@@ -62,7 +62,7 @@ function Export-TCMDriftReport {
             $baseline = Invoke-TCMGraphRequest -Endpoint "configurationMonitors/$mId/baseline"
             $resources = if ($baseline.Resources) { $baseline.Resources } elseif ($baseline.resources) { $baseline.resources } else { @() }
             $resourceCount = @($resources).Count
-        } catch { }
+        } catch { Write-Debug "Could not retrieve baseline for monitor ${mId}: $_" }
 
         [PSCustomObject]@{
             Id            = $mId

@@ -195,7 +195,7 @@ Invoke-Maester
 
 **How it works:**
 1. `Sync-TCMDriftToMaester` writes `baseline.json` + `current.json` into `./Maester/Drift/TCM-<MonitorName>/`
-2. It sets the `$env:MEASTER_FOLDER_DRIFT` environment variable that MT.1060 needs
+2. It sets the `$env:MAESTER_FOLDER_DRIFT` environment variable that MT.1060 needs
 3. Maester's MT.1060 test auto-discovers drift suites and compares baseline vs current
 4. If TCM detected drift → Maester test **fails** with property-level detail in Maester's HTML report
 5. If no drift → Maester test **passes**

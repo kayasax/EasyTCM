@@ -108,7 +108,7 @@ function Sync-TCMDriftToMaester {
                 $resType = if ($res -is [System.Collections.IDictionary]) { $res['resourceType'] } else { $res.resourceType }
                 $resDn = if ($res -is [System.Collections.IDictionary]) { $res['displayName'] } else { $res.displayName }
                 $resProps = if ($res -is [System.Collections.IDictionary]) { $res['properties'] } else { $res.properties }
-                $key = "$resType|$resDn"
+                $key = "${resType}::${resDn}"
                 $baselineData[$key] = @{
                     resourceType = $resType
                     displayName  = $resDn
@@ -127,7 +127,7 @@ function Sync-TCMDriftToMaester {
         $monitorDrifts = @($drifts | Where-Object { $_.MonitorId -eq $monId })
 
         foreach ($drift in $monitorDrifts) {
-            $key = "$($drift.ResourceType)|$($drift.ResourceDisplay)"
+            $key = "$($drift.ResourceType)::$($drift.ResourceDisplay)"
 
             if ($currentData.ContainsKey($key)) {
                 $current = $currentData[$key]

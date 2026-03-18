@@ -20,7 +20,7 @@ function New-TCMMonitor {
     .EXAMPLE
         New-TCMMonitor -DisplayName "Exchange Monitor" -BaselinePath "./baselines/exchange.json"
     #>
-    [CmdletBinding()]
+    [CmdletBinding(SupportsShouldProcess)]
     param(
         [Parameter(Mandatory)]
         [string]$DisplayName,
@@ -56,7 +56,7 @@ function New-TCMMonitor {
         # Quota impact: show this monitor's cost + existing monitors
         $dailyCost = $resourceCount * 4
         $existingMonitors = @()
-        try { $existingMonitors = @(Get-TCMMonitor) } catch { }
+        try { $existingMonitors = @(Get-TCMMonitor) } catch { Write-Debug "Could not retrieve existing monitors: $_" }
         $existingDailyCost = ($existingMonitors | ForEach-Object {
             # Estimate: we don't always know resource count, but count what we can
             if ($_.baseline -and $_.baseline.resources) { $_.baseline.resources.Count * 4 }
@@ -83,6 +83,7 @@ function New-TCMMonitor {
         if ($Description) { $body.description = $Description }
         if ($Parameters)  { $body.parameters = $Parameters }
 
+        if (-not $PSCmdlet.ShouldProcess($DisplayName, 'Create TCM monitor')) { return }
         $monitor = Invoke-TCMGraphRequest -Endpoint 'configurationMonitors' -Method POST -Body $body
 
         if (-not $monitor) {

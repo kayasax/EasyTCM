@@ -6,6 +6,7 @@ function Get-TCMWorkloadResources {
         Internal reference mapping of workload names to their TCM resource type prefixes.
         Used by snapshot and monitor cmdlets to resolve workload shortcuts.
     #>
+    [Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSUseSingularNouns', '', Justification = 'Function returns multiple resource types grouped by workload; plural name accurately reflects this collection-based return value')]
     [CmdletBinding()]
     param()
 

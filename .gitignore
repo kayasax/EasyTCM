@@ -29,4 +29,7 @@ TestResults/
 .env
 .env.local
 
+# Session memory (private)
+Session_starter.md
+
 EasyTCM-Report*.html

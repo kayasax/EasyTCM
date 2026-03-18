@@ -32,4 +32,7 @@ TestResults/
 # Session memory (private)
 Session_starter.md
 
+# Generated reports and drift data (tenant-specific)
 EasyTCM-Report*.html
+test-results/
+tests/Maester/

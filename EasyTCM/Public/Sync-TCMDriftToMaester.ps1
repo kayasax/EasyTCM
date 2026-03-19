@@ -224,14 +224,22 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
 
         `$drifted = [System.Collections.Generic.List[string]]::new()
         foreach (`$key in @(@(`$baseline.Keys) + @(`$current.Keys) | Select-Object -Unique)) {
-            if (-not `$baseline.ContainsKey(`$key)) { `$drifted.Add("[NEW] `$key"); continue }
-            if (-not `$current.ContainsKey(`$key))  { `$drifted.Add("[DELETED] `$key"); continue }
+            if (-not `$baseline.ContainsKey(`$key)) { `$drifted.Add(('| ``[NEW]`` | ``{0}`` |' -f `$key)); continue }
+            if (-not `$current.ContainsKey(`$key))  { `$drifted.Add(('| ``[DELETED]`` | ``{0}`` |' -f `$key)); continue }
             `$bJson = `$baseline[`$key] | ConvertTo-Json -Depth 20 -Compress
             `$cJson = `$current[`$key]  | ConvertTo-Json -Depth 20 -Compress
-            if (`$bJson -ne `$cJson) { `$drifted.Add("[CHANGED] `$key") }
+            if (`$bJson -ne `$cJson) { `$drifted.Add(('| ``[CHANGED]`` | ``{0}`` |' -f `$key)) }
         }
 
-        `$drifted | Should -HaveCount 0 -Because ("all resources should match the TCM baseline.`nDrift details:`n" + (`$drifted -join "`n"))
+        `$desc = ("Compares the TCM monitor baseline with current tenant state for **$escapedName**.`n`nBaseline: ``{0}`` resources | Current: ``{1}`` resources" -f `$baseline.Count, `$current.Count)
+        if (`$drifted.Count -eq 0) {
+            Add-MtTestResultDetail -Description `$desc -Result "✅ All resources match the TCM baseline."
+        } else {
+            `$table = "| Status | Resource |`n|--------|----------|`n" + (`$drifted -join "`n")
+            Add-MtTestResultDetail -Description `$desc -Result `$table
+        }
+
+        `$drifted | Should -HaveCount 0 -Because "all resources should match the TCM baseline"
     }
 }
 "@
@@ -333,22 +341,31 @@ Describe 'MT.1060: TCM Baseline Drift' -Tag 'TCM', 'BaselineDrift', 'MT.1060' {
         `$current  = Get-Content (Join-Path `$suitePath 'current.json')  -Raw | ConvertFrom-Json -AsHashtable
         `$settings = Get-Content (Join-Path `$suitePath 'settings.json') -Raw | ConvertFrom-Json
 
-        `$issues = [System.Collections.Generic.List[string]]::new()
+        `$rows = [System.Collections.Generic.List[string]]::new()
         foreach (`$key in `$current.Keys) {
             `$r = `$current[`$key]
             `$type = if (`$r -is [System.Collections.IDictionary]) { `$r['resourceType'] } else { `$r.resourceType }
             `$name = if (`$r -is [System.Collections.IDictionary]) { `$r['displayName'] } else { `$r.displayName }
-            if (-not `$baseline.ContainsKey(`$key)) { `$issues.Add("[+] `$type — `$name") }
+            `$id   = if (`$r -is [System.Collections.IDictionary]) { `$r['id'] } else { `$r.id }
+            if (-not `$baseline.ContainsKey(`$key)) { `$rows.Add(('| ➕ New | ``{0}`` | {1} | ``{2}`` |' -f `$type, `$name, `$id)) }
         }
         foreach (`$key in `$baseline.Keys) {
             `$r = `$baseline[`$key]
             `$type = if (`$r -is [System.Collections.IDictionary]) { `$r['resourceType'] } else { `$r.resourceType }
             `$name = if (`$r -is [System.Collections.IDictionary]) { `$r['displayName'] } else { `$r.displayName }
-            if (-not `$current.ContainsKey(`$key)) { `$issues.Add("[-] `$type — `$name") }
+            `$id   = if (`$r -is [System.Collections.IDictionary]) { `$r['id'] } else { `$r.id }
+            if (-not `$current.ContainsKey(`$key)) { `$rows.Add(('| ❌ Deleted | ``{0}`` | {1} | ``{2}`` |' -f `$type, `$name, `$id)) }
         }
 
-        `$detail = "`$(`$settings.NewCount) new, `$(`$settings.DeletedCount) deleted resources:`n" + (`$issues -join "`n")
-        `$issues | Should -HaveCount 0 -Because `$detail
+        `$desc = "Detects resources in the tenant that are **not tracked** by the TCM monitor baseline.`n`nNew resources may represent shadow configuration; deleted resources may indicate unauthorized removal."
+        if (`$rows.Count -eq 0) {
+            Add-MtTestResultDetail -Description `$desc -Result "✅ No untracked resources. Baseline is up to date."
+        } else {
+            `$table = "**`$(`$settings.NewCount) new, `$(`$settings.DeletedCount) deleted** resources detected:`n`n| Status | Type | Name | Id |`n|--------|------|------|----|`n" + (`$rows -join "`n")
+            Add-MtTestResultDetail -Description `$desc -Result `$table
+        }
+
+        `$rows | Should -HaveCount 0 -Because "no untracked new or deleted resources should exist"
     }
 }
 "@

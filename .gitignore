@@ -29,6 +29,10 @@ TestResults/
 .env
 .env.local
 
+# Private drafts
+linkedin-*.md
+*-DRAFT.md
+
 # Session memory (private)
 Session_starter.md
 

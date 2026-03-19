@@ -24,7 +24,7 @@ function Sync-TCMDriftToMaester {
     .PARAMETER OutputPath
         The folder where drift suites will be written. Should be under or alongside
         your Maester test root so MT.1060 discovers them.
-        Default: ./tests/Maester/Drift
+        Default priority: $env:MAESTER_TESTS_PATH/Drift → ./tests/Maester/Drift
     .PARAMETER MonitorId
         Sync drifts from a specific monitor. If omitted, syncs all active drifts.
     .PARAMETER IncludeFixed
@@ -53,7 +53,7 @@ function Sync-TCMDriftToMaester {
     #>
     [CmdletBinding()]
     param(
-        [string]$OutputPath = './tests/Maester/Drift',
+        [string]$OutputPath,
 
         [string]$MonitorId,
 
@@ -63,6 +63,15 @@ function Sync-TCMDriftToMaester {
 
         [switch]$PassThru
     )
+
+    # Resolve OutputPath: explicit param → env var → default
+    if (-not $OutputPath) {
+        $OutputPath = if ($env:MAESTER_TESTS_PATH) {
+            Join-Path $env:MAESTER_TESTS_PATH 'Drift'
+        } else {
+            './tests/Maester/Drift'
+        }
+    }
 
     Write-Host '🔗 Syncing TCM drifts to Maester format...' -ForegroundColor Cyan
 
@@ -230,12 +239,13 @@ function Sync-TCMDriftToMaester {
     Write-Host ''
     if ($totalDrifts -gt 0) {
         Write-Host "⚠️  $totalDrifts active drifts synced across $($summaries.Count) monitors." -ForegroundColor Yellow
-        Write-Host "   Run: Invoke-Maester -Path '$OutputPath'" -ForegroundColor DarkGray
     }
     else {
         Write-Host "✅ No active drifts. All $($summaries.Count) monitors are clean." -ForegroundColor Green
-        Write-Host "   Run: Invoke-Maester -Path '$OutputPath'" -ForegroundColor DarkGray
     }
+    Write-Host "   Drift folder: $resolvedOutput" -ForegroundColor DarkGray
+    Write-Host '   MT.1060 will auto-discover drift suites via $env:MEASTER_FOLDER_DRIFT' -ForegroundColor DarkGray
+    Write-Host '   Run: Invoke-Maester' -ForegroundColor DarkGray
 
     # Optional: run Compare-TCMBaseline and generate a baseline drift suite
     if ($CompareBaseline) {

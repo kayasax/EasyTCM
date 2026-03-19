@@ -122,7 +122,7 @@ function Initialize-TCM {
         $manageAsApp = $exoSp.appRoles | Where-Object { $_.value -eq 'Exchange.ManageAsApp' }
         if ($manageAsApp) {
             $existingExo = $null
-            try { $existingExo = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments?`$filter=appRoleId eq '$($manageAsApp.id)'" } catch { }
+            try { $existingExo = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/servicePrincipals/$($tcmSp.id)/appRoleAssignments?`$filter=appRoleId eq '$($manageAsApp.id)'" } catch { Write-Debug "Could not check existing Exchange.ManageAsApp assignment: $_" }
             if ($existingExo.value -and $existingExo.value.Count -gt 0) {
                 Write-Host "  Exchange.ManageAsApp already granted" -ForegroundColor DarkGray
             }
@@ -147,7 +147,7 @@ function Initialize-TCM {
         }
         if ($compAdmin) {
             $memberCheck = $null
-            try { $memberCheck = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/directoryRoles/$($compAdmin.id)/members?`$filter=id eq '$($tcmSp.id)'" } catch { }
+            try { $memberCheck = Invoke-MgGraphRequest -Method GET -Uri "https://graph.microsoft.com/v1.0/directoryRoles/$($compAdmin.id)/members?`$filter=id eq '$($tcmSp.id)'" } catch { Write-Debug "Could not check existing Compliance Administrator assignment: $_" }
             if ($memberCheck.value -and $memberCheck.value.Count -gt 0) {
                 Write-Host "  Compliance Administrator already assigned" -ForegroundColor DarkGray
             }

@@ -20,3 +20,6 @@ $script:TCM_GRAPH_SCOPES  = @(
     'ConfigurationMonitoring.Read.All'
     'ConfigurationMonitoring.ReadWrite.All'
 )
+
+# Cache for Compare-TCMBaseline results (avoids re-snapshotting within 1 hour)
+$script:CompareBaselineCache = $null

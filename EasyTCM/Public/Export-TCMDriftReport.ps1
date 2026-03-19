@@ -104,12 +104,27 @@ function Export-TCMDriftReport {
         'microsoft.entra.authorizationpolicy'                        = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/TenantOverview.ReactView'
         'microsoft.entra.crosstenantaccesspolicy'                    = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/CrossTenantAccessSettings'
         'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'= 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/CrossTenantAccessSettings'
+        'microsoft.entra.roledefinition'                             = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles'
+        'microsoft.entra.administrativeunit'                         = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AdminUnitsBlade'
+        'microsoft.entra.grouplifecyclepolicy'                       = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/Lifecycle'
+        'microsoft.entra.externalidentitypolicy'                     = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/Settings'
         'microsoft.exchange.transportrule'                           = 'https://admin.exchange.microsoft.com/#/transportrules'
         'microsoft.exchange.accepteddomain'                          = 'https://admin.exchange.microsoft.com/#/accepteddomains'
+        'microsoft.exchange.antiphishpolicy'                         = 'https://security.microsoft.com/antiphishing'
+        'microsoft.exchange.safeattachmentpolicy'                    = 'https://security.microsoft.com/safeattachmentv2'
+        'microsoft.exchange.safelinkspolicy'                         = 'https://security.microsoft.com/safelinksv2'
+        'microsoft.exchange.hostedcontentfilterpolicy'               = 'https://security.microsoft.com/antispam'
+        'microsoft.exchange.hostedoutboundspamfilterpolicy'          = 'https://security.microsoft.com/antispam'
+        'microsoft.exchange.organizationconfig'                      = 'https://admin.exchange.microsoft.com/#/settings'
         'microsoft.teams.meetingpolicy'                              = 'https://admin.teams.microsoft.com/policies/meetings'
-        'microsoft.securityandcompliance.dlpcompliancepolicy'            = 'https://compliance.microsoft.com/datalossprevention'
-        'microsoft.securityandcompliance.retentioncompliancepolicy'      = 'https://compliance.microsoft.com/informationgovernance'
-        'microsoft.securityandcompliance.labelpolicy'                    = 'https://compliance.microsoft.com/informationprotection'
+        'microsoft.teams.messagingpolicy'                            = 'https://admin.teams.microsoft.com/policies/messaging'
+        'microsoft.teams.apppermissionpolicy'                        = 'https://admin.teams.microsoft.com/policies/app-permission'
+        'microsoft.teams.meetingconfiguration'                       = 'https://admin.teams.microsoft.com/meetings/settings'
+        'microsoft.teams.federationconfiguration'                    = 'https://admin.teams.microsoft.com/company-wide-settings/external-communications'
+        'microsoft.teams.dialinconferencingtenantsettings'           = 'https://admin.teams.microsoft.com/meetings/conference-bridges'
+        'microsoft.securityandcompliance.dlpcompliancepolicy'        = 'https://compliance.microsoft.com/datalossprevention'
+        'microsoft.securityandcompliance.retentioncompliancepolicy'  = 'https://compliance.microsoft.com/informationgovernance'
+        'microsoft.securityandcompliance.labelpolicy'                = 'https://compliance.microsoft.com/informationprotection'
     }
 
     # Build HTML
@@ -186,13 +201,15 @@ function Export-TCMDriftReport {
         $blNewRows = ''
         foreach ($r in $baselineComparison.NewResources) {
             $shortType = ($r.ResourceType -split '\.')[-1]
-            $portalLink = if ($portalLinks.ContainsKey($r.ResourceType)) { $portalLinks[$r.ResourceType] } else { '#' }
-            $blNewRows += "<tr><td><span class='badge badge-active'>+ New</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.DisplayName ?? $r.Id))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td><a href='$portalLink' target='_blank' class='portal-link'>Open Portal &#8599;</a></td></tr>"
+            $name = if ($r.DisplayName -and $r.DisplayName -ne $r.Id) { $r.DisplayName } else { $r.Id }
+            $portalCell = if ($portalLinks.ContainsKey($r.ResourceType)) { "<a href='$($portalLinks[$r.ResourceType])' target='_blank' class='portal-link'>Open Portal &#8599;</a>" } else { '' }
+            $blNewRows += "<tr><td><span class='badge badge-active'>+ New</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($name))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td>$portalCell</td></tr>"
         }
         foreach ($r in $baselineComparison.DeletedResources) {
             $shortType = ($r.ResourceType -split '\.')[-1]
-            $portalLink = if ($portalLinks.ContainsKey($r.ResourceType)) { $portalLinks[$r.ResourceType] } else { '#' }
-            $blNewRows += "<tr><td><span class='badge badge-inactive'>- Deleted</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.DisplayName ?? $r.Id))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td><a href='$portalLink' target='_blank' class='portal-link'>Open Portal &#8599;</a></td></tr>"
+            $name = if ($r.DisplayName -and $r.DisplayName -ne $r.Id) { $r.DisplayName } else { $r.Id }
+            $portalCell = if ($portalLinks.ContainsKey($r.ResourceType)) { "<a href='$($portalLinks[$r.ResourceType])' target='_blank' class='portal-link'>Open Portal &#8599;</a>" } else { '' }
+            $blNewRows += "<tr><td><span class='badge badge-inactive'>- Deleted</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($name))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td>$portalCell</td></tr>"
         }
         if (-not $blNewRows) {
             $blNewRows = '<tr><td colspan="5" class="center no-drift">No new or deleted resources detected. Baseline coverage is complete.</td></tr>'

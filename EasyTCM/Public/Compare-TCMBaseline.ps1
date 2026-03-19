@@ -25,6 +25,8 @@ function Compare-TCMBaseline {
         Show per-resource instance details, not just summary counts.
     .PARAMETER KeepSnapshot
         Don't auto-delete the comparison snapshot job after analysis.
+    .PARAMETER Force
+        Bypass the 1-hour result cache and take a fresh snapshot.
     .PARAMETER WhatIf
         Preview which resource types will be snapshotted and the quota cost.
     .EXAMPLE
@@ -42,8 +44,17 @@ function Compare-TCMBaseline {
         [string]$Profile = 'Recommended',
 
         [switch]$Detailed,
-        [switch]$KeepSnapshot
+        [switch]$KeepSnapshot,
+        [switch]$Force
     )
+
+    # Check cache (1-hour TTL) — avoids re-snapshotting for repeated calls
+    if (-not $Force -and $script:CompareBaselineCache -and
+        $script:CompareBaselineCache.CachedAt -gt (Get-Date).AddHours(-1)) {
+        $cached = $script:CompareBaselineCache.Result
+        Write-Host "Using cached baseline comparison from $($script:CompareBaselineCache.CachedAt.ToString('HH:mm:ss')) ($($cached.NewCount) new, $($cached.DeletedCount) deleted). Use -Force to refresh." -ForegroundColor DarkGray
+        return $cached
+    }
 
     # 1. Resolve monitor and get baseline
     Write-Host 'Retrieving monitor baseline...' -ForegroundColor Cyan
@@ -111,7 +122,7 @@ function Compare-TCMBaseline {
 
     # 4. Take a fresh snapshot of all profile resource types
     Write-Host 'Taking comparison snapshot...' -ForegroundColor Cyan
-    $snapshotName = "Compare $(Get-Date -Format 'yyyyMMdd HHmm')"
+    $snapshotName = "Compare $(Get-Date -Format 'yyyyMMdd HHmmss')"
     $snapshotJob = New-TCMSnapshot -DisplayName $snapshotName -Resources $snapshotTypes -Wait -TimeoutSeconds 300
 
     $jobId = if ($snapshotJob -is [System.Collections.IDictionary]) { $snapshotJob['id'] } else { $snapshotJob.id }
@@ -287,7 +298,7 @@ function Compare-TCMBaseline {
     }
 
     # Return structured output
-    [PSCustomObject]@{
+    $result = [PSCustomObject]@{
         PSTypeName       = 'EasyTCM.BaselineComparisonResult'
         Monitor          = $monitorName
         MonitorId        = $monitor.Id
@@ -302,4 +313,9 @@ function Compare-TCMBaseline {
         TypeSummary      = $results
         SnapshotId       = if ($KeepSnapshot) { $jobId } else { $null }
     }
+
+    # Cache result for 1 hour
+    $script:CompareBaselineCache = @{ Result = $result; CachedAt = Get-Date }
+
+    $result
 }

@@ -47,7 +47,7 @@ function Export-TCMDriftReport {
     }
 
     $drifts = @(Get-TCMDrift)
-    $quota = Get-TCMQuota
+    $quota = Get-TCMQuota -PassThru
 
     # Build monitor details with baselines
     $monitorData = foreach ($m in $monitors) {
@@ -108,10 +108,10 @@ function Export-TCMDriftReport {
     $driftRows = ''
     foreach ($monitor in $monitorData) {
         foreach ($drift in $monitor.Drifts) {
-            $dDn = if ($drift -is [System.Collections.IDictionary]) { $drift['displayName'] } else { $drift.displayName }
-            $dType = if ($drift -is [System.Collections.IDictionary]) { $drift['resourceType'] } else { $drift.resourceType }
-            $dStatus = if ($drift -is [System.Collections.IDictionary]) { $drift['status'] } else { $drift.status }
-            $dProps = if ($drift -is [System.Collections.IDictionary]) { $drift['driftedProperties'] } else { $drift.driftedProperties }
+            $dDn = if ($drift -is [System.Collections.IDictionary]) { $drift['ResourceDisplay'] ?? $drift['baselineResourceDisplayName'] ?? $drift['displayName'] } else { $drift.ResourceDisplay ?? $drift.baselineResourceDisplayName ?? $drift.displayName }
+            $dType = if ($drift -is [System.Collections.IDictionary]) { $drift['ResourceType'] ?? $drift['resourceType'] } else { $drift.ResourceType ?? $drift.resourceType }
+            $dStatus = if ($drift -is [System.Collections.IDictionary]) { $drift['Status'] ?? $drift['status'] } else { $drift.Status ?? $drift.status }
+            $dProps = if ($drift -is [System.Collections.IDictionary]) { $drift['DriftedProperties'] ?? $drift['driftedProperties'] } else { $drift.DriftedProperties ?? $drift.driftedProperties }
 
             $portalLink = if ($portalLinks.ContainsKey($dType)) { $portalLinks[$dType] } else { '#' }
             $propCount = @($dProps).Count
@@ -119,8 +119,10 @@ function Export-TCMDriftReport {
             $propDetails = ''
             foreach ($p in $dProps) {
                 $pName = if ($p -is [System.Collections.IDictionary]) { $p['propertyName'] } else { $p.propertyName }
-                $pExpected = if ($p -is [System.Collections.IDictionary]) { $p['expectedValue'] } else { $p.expectedValue }
-                $pActual = if ($p -is [System.Collections.IDictionary]) { $p['currentValue'] } else { $p.currentValue }
+                $pExpectedRaw = if ($p -is [System.Collections.IDictionary]) { $p['desiredValue'] ?? $p['expectedValue'] } else { $p.desiredValue ?? $p.expectedValue }
+                $pActualRaw = if ($p -is [System.Collections.IDictionary]) { $p['currentValue'] } else { $p.currentValue }
+                $pExpected = if ($pExpectedRaw -is [System.Collections.IEnumerable] -and $pExpectedRaw -isnot [string]) { $pExpectedRaw -join ' ' } else { "$pExpectedRaw" }
+                $pActual = if ($pActualRaw -is [System.Collections.IEnumerable] -and $pActualRaw -isnot [string]) { $pActualRaw -join ' ' } else { "$pActualRaw" }
                 $propDetails += "<div class='prop-row'><span class='prop-name'>$([System.Web.HttpUtility]::HtmlEncode($pName))</span><span class='prop-expected'>$([System.Web.HttpUtility]::HtmlEncode("$pExpected"))</span><span class='prop-actual'>$([System.Web.HttpUtility]::HtmlEncode("$pActual"))</span></div>"
             }
 

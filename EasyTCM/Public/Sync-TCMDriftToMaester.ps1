@@ -271,9 +271,10 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
         Write-Host "✅ No active drifts. All $($summaries.Count) monitors are clean." -ForegroundColor Green
     }
     Write-Host "   Drift folder: $resolvedOutput" -ForegroundColor DarkGray
-    # Guide user to run Maester from the test root so all tests (CIS, EIDSCA, drift, etc.) are discovered
-    $maesterRoot = if ($env:MAESTER_TESTS_PATH) { $env:MAESTER_TESTS_PATH } else { Split-Path $resolvedOutput }
-    Write-Host "   Run: cd $maesterRoot; Invoke-Maester" -ForegroundColor DarkGray
+    Write-Host "   Run: Invoke-Maester -Path $resolvedOutput" -ForegroundColor DarkGray
+    if ($env:MAESTER_TESTS_PATH) {
+        Write-Host "   Full suite: cd $($env:MAESTER_TESTS_PATH); Invoke-Maester" -ForegroundColor DarkGray
+    }
 
     # Optional: run Compare-TCMBaseline and generate a baseline drift suite
     if ($CompareBaseline) {

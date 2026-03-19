@@ -39,18 +39,19 @@ Describe 'EasyTCM Module' {
     }
 
     It 'should set module-level constants' {
-        # Access via module scope
-        $tcmAppId = & (Get-Module EasyTCM) { $script:TCM_APP_ID }
+        # Access via module scope (Select -First 1 in case module loaded twice)
+        $mod = Get-Module EasyTCM | Select-Object -First 1
+        $tcmAppId = & $mod { $script:TCM_APP_ID }
         $tcmAppId | Should -Be '03b07b79-c5bc-4b5e-9bfa-13acf4a99998'
 
-        $baseUrl = & (Get-Module EasyTCM) { $script:TCM_BASE_URL }
+        $baseUrl = & $mod { $script:TCM_BASE_URL }
         $baseUrl | Should -Be 'https://graph.microsoft.com/beta/admin/configurationManagement'
     }
 }
 
 Describe 'Get-TCMWorkloadResources' {
     It 'should return all 5 workloads' {
-        $map = & (Get-Module EasyTCM) { Get-TCMWorkloadResources }
+        $map = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMWorkloadResources }
         $map.Keys | Should -Contain 'Entra'
         $map.Keys | Should -Contain 'Exchange'
         $map.Keys | Should -Contain 'Intune'
@@ -60,7 +61,7 @@ Describe 'Get-TCMWorkloadResources' {
     }
 
     It 'should have resource types in correct format' {
-        $map = & (Get-Module EasyTCM) { Get-TCMWorkloadResources }
+        $map = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMWorkloadResources }
         foreach ($workload in $map.Keys) {
             foreach ($resource in $map[$workload]) {
                 $resource | Should -Match '^microsoft\.\w+\.\w+'
@@ -140,13 +141,13 @@ Describe 'ConvertTo-TCMBaseline' {
 
 Describe 'Get-TCMMonitoringProfile' {
     It 'should return SecurityCritical and Recommended profiles' {
-        $profiles = & (Get-Module EasyTCM) { Get-TCMMonitoringProfile }
+        $profiles = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMMonitoringProfile }
         $profiles.Keys | Should -Contain 'SecurityCritical'
         $profiles.Keys | Should -Contain 'Recommended'
     }
 
     It 'should have SecurityCritical as a subset of Recommended' {
-        $profiles = & (Get-Module EasyTCM) { Get-TCMMonitoringProfile }
+        $profiles = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMMonitoringProfile }
         foreach ($type in $profiles.SecurityCritical) {
             $profiles.Recommended | Should -Contain $type
         }

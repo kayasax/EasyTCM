@@ -74,7 +74,7 @@ function Get-TCMMonitoringProfile {
             'microsoft.intune.accountprotectionlocalusergroupmembershippolicy'
             # + Security & Compliance — data protection
             'microsoft.securityandcompliance.dlpcompliancepolicy'
-            'microsoft.securityandcompliance.dlpcompliancerule'
+            # NOTE: dlpcompliancerule excluded — TCM snapshot API rejects it as unsupported
             'microsoft.securityandcompliance.retentioncompliancepolicy'
             'microsoft.securityandcompliance.retentioncompliancerule'
             'microsoft.securityandcompliance.labelpolicy'

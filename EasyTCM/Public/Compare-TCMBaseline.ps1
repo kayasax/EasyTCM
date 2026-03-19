@@ -13,10 +13,14 @@ function Compare-TCMBaseline {
         - Deleted resources: in the baseline but no longer in the tenant
         - Matched resources: covered by TCM drift detection (shown with -Detailed)
 
-        The snapshot is scoped to only the resource types in the baseline to
-        minimize quota usage.
+        The snapshot covers all resource types from the monitoring profile
+        (default: Recommended), not just types with existing data in the baseline.
+        This ensures new resources in previously-empty types are detected.
     .PARAMETER MonitorId
         The monitor to compare. If omitted, uses the first active monitor.
+    .PARAMETER Profile
+        Monitoring profile that defines which resource types to snapshot.
+        Default: Recommended. This should match the profile used to create the baseline.
     .PARAMETER Detailed
         Show per-resource instance details, not just summary counts.
     .PARAMETER KeepSnapshot
@@ -33,6 +37,10 @@ function Compare-TCMBaseline {
     [CmdletBinding(SupportsShouldProcess)]
     param(
         [string]$MonitorId,
+
+        [ValidateSet('SecurityCritical', 'Recommended', 'Full')]
+        [string]$Profile = 'Recommended',
+
         [switch]$Detailed,
         [switch]$KeepSnapshot
     )
@@ -65,32 +73,46 @@ function Compare-TCMBaseline {
         throw "Monitor '$monitorName' has an empty baseline."
     }
 
-    # 2. Extract distinct resource types from baseline
+    # 2. Extract distinct resource types from baseline AND profile
     $baselineTypes = @($baselineResources | ForEach-Object {
         if ($_ -is [System.Collections.IDictionary]) { $_['ResourceType'] ?? $_['resourceType'] }
         else { $_.ResourceType ?? $_.resourceType }
     } | Select-Object -Unique)
 
+    # Include all types from the monitoring profile — not just baseline types
+    # This catches new resources in types that had zero instances at baseline time
+    $profiles = Get-TCMMonitoringProfile
+    $profileTypes = if ($Profile -eq 'Full') {
+        # For Full, use all known types from all workloads
+        $workloads = Get-TCMWorkloadResources
+        $workloads.Values | ForEach-Object { $_ } | Select-Object -Unique
+    } else {
+        $profiles[$Profile]
+    }
+    $snapshotTypes = @(@($baselineTypes) + @($profileTypes) | Select-Object -Unique | Sort-Object)
+
     Write-Host "  Monitor: $monitorName ($($baselineResources.Count) resources across $($baselineTypes.Count) types)" -ForegroundColor DarkGray
+    Write-Host "  Profile: $Profile ($($snapshotTypes.Count) types to scan)" -ForegroundColor DarkGray
 
     # 3. WhatIf: show preview
-    if (-not $PSCmdlet.ShouldProcess("Snapshot $($baselineTypes.Count) resource types ($($baselineResources.Count) baseline resources)", 'Create comparison snapshot')) {
+    if (-not $PSCmdlet.ShouldProcess("Snapshot $($snapshotTypes.Count) resource types ($Profile profile)", 'Create comparison snapshot')) {
         Write-Host "`nPreview — resource types that would be snapshotted:" -ForegroundColor Yellow
-        foreach ($t in $baselineTypes | Sort-Object) {
+        foreach ($t in $snapshotTypes | Sort-Object) {
             $count = @($baselineResources | Where-Object {
                 $rt = if ($_ -is [System.Collections.IDictionary]) { $_['ResourceType'] ?? $_['resourceType'] } else { $_.ResourceType ?? $_.resourceType }
                 $rt -eq $t
             }).Count
-            Write-Host "  $t ($count in baseline)"
+            $marker = if ($count -eq 0) { ' (no baseline data)' } else { " ($count in baseline)" }
+            Write-Host "  $t$marker"
         }
-        Write-Host "`nSnapshot quota cost: ~$($baselineResources.Count) resources against 20,000/month limit" -ForegroundColor Yellow
+        Write-Host "`nEstimated snapshot quota cost against 20,000/month limit" -ForegroundColor Yellow
         return
     }
 
-    # 4. Take a fresh snapshot of the same resource types
+    # 4. Take a fresh snapshot of all profile resource types
     Write-Host 'Taking comparison snapshot...' -ForegroundColor Cyan
     $snapshotName = "Compare $(Get-Date -Format 'yyyyMMdd HHmm')"
-    $snapshotJob = New-TCMSnapshot -DisplayName $snapshotName -Resources $baselineTypes -Wait -TimeoutSeconds 300
+    $snapshotJob = New-TCMSnapshot -DisplayName $snapshotName -Resources $snapshotTypes -Wait -TimeoutSeconds 300
 
     $jobId = if ($snapshotJob -is [System.Collections.IDictionary]) { $snapshotJob['id'] } else { $snapshotJob.id }
     $jobStatus = if ($snapshotJob -is [System.Collections.IDictionary]) { $snapshotJob['status'] } else { $snapshotJob.status }

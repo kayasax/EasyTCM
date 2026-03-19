@@ -48,12 +48,14 @@ function Compare-TCMBaseline {
         [switch]$Force
     )
 
-    # Check cache (1-hour TTL) — avoids re-snapshotting for repeated calls
-    if (-not $Force -and $script:CompareBaselineCache -and
-        $script:CompareBaselineCache.CachedAt -gt (Get-Date).AddHours(-1)) {
-        $cached = $script:CompareBaselineCache.Result
-        Write-Host "Using cached baseline comparison from $($script:CompareBaselineCache.CachedAt.ToString('HH:mm:ss')) ($($cached.NewCount) new, $($cached.DeletedCount) deleted). Use -Force to refresh." -ForegroundColor DarkGray
-        return $cached
+    # Check file cache (1-hour TTL) — survives Import-Module -Force and session restarts
+    if (-not $Force -and (Test-Path $script:CompareBaselineCachePath)) {
+        $cacheFile = Get-Item $script:CompareBaselineCachePath
+        if ($cacheFile.LastWriteTime -gt (Get-Date).AddHours(-1)) {
+            $cached = Get-Content $script:CompareBaselineCachePath -Raw | ConvertFrom-Json
+            Write-Host "Using cached baseline comparison from $($cacheFile.LastWriteTime.ToString('HH:mm:ss')) ($($cached.NewCount) new, $($cached.DeletedCount) deleted). Use -Force to refresh." -ForegroundColor DarkGray
+            return $cached
+        }
     }
 
     # 1. Resolve monitor and get baseline
@@ -314,8 +316,8 @@ function Compare-TCMBaseline {
         SnapshotId       = if ($KeepSnapshot) { $jobId } else { $null }
     }
 
-    # Cache result for 1 hour
-    $script:CompareBaselineCache = @{ Result = $result; CachedAt = Get-Date }
+    # Cache result to file (1-hour TTL via LastWriteTime)
+    $result | ConvertTo-Json -Depth 20 | Set-Content -Path $script:CompareBaselineCachePath -Encoding utf8
 
     $result
 }

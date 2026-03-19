@@ -21,5 +21,5 @@ $script:TCM_GRAPH_SCOPES  = @(
     'ConfigurationMonitoring.ReadWrite.All'
 )
 
-# Cache for Compare-TCMBaseline results (avoids re-snapshotting within 1 hour)
-$script:CompareBaselineCache = $null
+# File-based cache for Compare-TCMBaseline results (survives module reimports)
+$script:CompareBaselineCachePath = Join-Path ([System.IO.Path]::GetTempPath()) 'EasyTCM-CompareBaselineCache.json'

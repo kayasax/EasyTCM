@@ -231,7 +231,7 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
             if (`$bJson -ne `$cJson) { `$drifted.Add("[CHANGED] `$key") }
         }
 
-        `$drifted | Should -HaveCount 0 -Because "All resources should match the TCM baseline"
+        `$drifted | Should -HaveCount 0 -Because ("all resources should match the TCM baseline.`nDrift details:`n" + (`$drifted -join "`n"))
     }
 }
 "@
@@ -331,16 +331,24 @@ Describe 'MT.1060: TCM Baseline Drift' -Tag 'TCM', 'BaselineDrift', 'MT.1060' {
         `$suitePath = `$PSScriptRoot
         `$baseline = Get-Content (Join-Path `$suitePath 'baseline.json') -Raw | ConvertFrom-Json -AsHashtable
         `$current  = Get-Content (Join-Path `$suitePath 'current.json')  -Raw | ConvertFrom-Json -AsHashtable
+        `$settings = Get-Content (Join-Path `$suitePath 'settings.json') -Raw | ConvertFrom-Json
 
         `$issues = [System.Collections.Generic.List[string]]::new()
         foreach (`$key in `$current.Keys) {
-            if (-not `$baseline.ContainsKey(`$key)) { `$issues.Add("[NEW] `$key") }
+            `$r = `$current[`$key]
+            `$type = if (`$r -is [System.Collections.IDictionary]) { `$r['resourceType'] } else { `$r.resourceType }
+            `$name = if (`$r -is [System.Collections.IDictionary]) { `$r['displayName'] } else { `$r.displayName }
+            if (-not `$baseline.ContainsKey(`$key)) { `$issues.Add("[+] `$type — `$name") }
         }
         foreach (`$key in `$baseline.Keys) {
-            if (-not `$current.ContainsKey(`$key)) { `$issues.Add("[DELETED] `$key") }
+            `$r = `$baseline[`$key]
+            `$type = if (`$r -is [System.Collections.IDictionary]) { `$r['resourceType'] } else { `$r.resourceType }
+            `$name = if (`$r -is [System.Collections.IDictionary]) { `$r['displayName'] } else { `$r.displayName }
+            if (-not `$current.ContainsKey(`$key)) { `$issues.Add("[-] `$type — `$name") }
         }
 
-        `$issues | Should -HaveCount 0 -Because "No untracked new or deleted resources should exist"
+        `$detail = "`$(`$settings.NewCount) new, `$(`$settings.DeletedCount) deleted resources:`n" + (`$issues -join "`n")
+        `$issues | Should -HaveCount 0 -Because `$detail
     }
 }
 "@

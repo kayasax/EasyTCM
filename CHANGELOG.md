@@ -5,6 +5,26 @@ All notable changes to EasyTCM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2026-03-19
+
+### Added
+- **`Start-TCMMonitoring`** — Guided setup wizard: from zero to monitoring in a single command. Handles Graph connection, service principal setup, snapshot, baseline conversion, and monitor creation with a 5-step interactive flow.
+- **`Watch-TCMDrift`** — Daily drift check with three modes: console summary (default), HTML report (`-Report`), or Maester test results (`-Maester`). Includes `-CompareBaseline` to detect new/deleted resources and `-PassThru` for pipeline integration.
+- **`Update-TCMBaseline`** — Rebaseline after approved changes: takes a fresh snapshot, converts to baseline with the same profile, updates the monitor, and clears all previous drift records. Shows current drift for review before proceeding.
+- **`Compare-TCMBaseline`** — file-based cache (`%TEMP%\EasyTCM-CompareBaselineCache.json`) that survives `Import-Module -Force` and session restarts (1-hour TTL)
+- **Maester test generation** — `Sync-TCMDriftToMaester` now generates `TCM-Drift.Tests.ps1` per drift suite with `Add-MtTestResultDetail` for proper Maester report formatting (markdown tables with property diffs)
+- **GitHub Pages documentation site** — narrative docs covering the tenant drift problem, monitoring profiles, Maester integration, and continuous monitoring lifecycle
+
+### Fixed
+- Unit tests renamed from `.Tests.ps1` to `.test.ps1` to prevent Maester discovery
+- `Get-Module EasyTCM` double-module bug fixed with `Select-Object -First 1`
+- Variable escaping in generated Maester test templates — switched from string interpolation to `-f` format operator
+- `$baseline.Count` showing type name instead of count in generated tests
+
+### Changed
+- Module version: 0.2.0 → 0.3.0
+- Exported cmdlets: 16 → 19
+
 ## [0.2.0] - 2026-03-18
 
 ### Added

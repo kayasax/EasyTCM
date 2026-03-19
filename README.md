@@ -114,13 +114,16 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 | Document | Description |
 |---|---|
 | **[Getting Started](docs/GETTING-STARTED.md)** | Step-by-step guide: install → setup → first monitor in 10 minutes |
+| **[📖 Documentation Site](https://kayasax.github.io/EasyTCM/)** | Full narrative: problem → solution → Maester → continuous monitoring |
+| [Maester Integration](https://kayasax.github.io/EasyTCM/maester-integration) | Turn TCM into Maester's drift detection backend |
+| [Continuous Monitoring](https://kayasax.github.io/EasyTCM/continuous-monitoring) | Setup → daily checks → rebaselining lifecycle |
 | [Product Vision & Roadmap](docs/VISION.md) | Where we're going and why |
 | [Contributing](CONTRIBUTING.md) | How to contribute cmdlets, templates, and fixes |
 | [Changelog](CHANGELOG.md) | Version history |
 
 ---
 
-## 🎯 Cmdlets — v0.1.0 (15 shipped)
+## 🎯 Cmdlets — v0.3.0 (19 shipped)
 
 ### Setup & Authentication
 
@@ -166,13 +169,23 @@ Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
 
 ![Maester MT.1060 detecting TCM drift](docs/images/maester-drift.png)
 
-### 🔮 Planned
+#### 🚀 Easy Buttons (v0.3.0) — Zero-to-Monitoring in One Command
+
+| Cmdlet | Description |
+|---|---|
+| `Start-TCMMonitoring` | Guided wizard: connect → setup → snapshot → baseline → monitor. One command to start. |
+| `Watch-TCMDrift` | Daily drift check: console summary, `-Report` for HTML, `-Maester` for test results |
+| `Update-TCMBaseline` | After approved changes, take a fresh snapshot and update the baseline |
+
+**[📖 Continuous Monitoring Guide](https://kayasax.github.io/EasyTCM/continuous-monitoring)** — Full lifecycle documentation.
+
+#### 🔮 Planned
 
 | Cmdlet | Target | Description |
 |---|---|---|
-| `Repair-TCMDrift` | v0.3 | Generate remediation scripts from detected drifts |
-| `Compare-TCMTenant` | v0.3 | Compare configurations across two tenants |
-| Baseline Templates | v0.2 | CIS/CISA pre-built baselines via `-Template` parameter |
+| `Repair-TCMDrift` | v0.4 | Generate remediation scripts from detected drifts |
+| `Compare-TCMTenant` | v0.4 | Compare configurations across two tenants |
+| Baseline Templates | v0.4 | CIS/CISA pre-built baselines via `-Template` parameter |
 
 ---
 
@@ -245,19 +258,29 @@ $baseline = $snapshot | ConvertTo-TCMBaseline -Profile Full
 - [x] GitHub Actions CI + PSGallery publish workflow
 - [x] Pester unit tests
 
-### 🏗️ Phase 2 — Validate & Report (v0.2.0) — IN PROGRESS
+### 🏗️ Phase 2 — Validate & Report (v0.2.0) — SHIPPED
 - [x] ✅ Validate all cmdlets against live TCM tenant (62 resource types across 5 workloads)
 - [x] ✅ Refine `ConvertTo-TCMBaseline` with real snapshot data + monitoring profiles
 - [x] ✅ `Export-TCMDriftReport` — HTML dashboard with quota bars, property diffs, admin portal deep links
 - [x] ✅ `Get-TCMMonitoringResult` — monitor cycle visibility (hidden `configurationMonitoringResults` endpoint)
 - [ ] Teams adaptive card notifications
 - [ ] CIS/CISA baseline templates
-- [ ] Publish to PSGallery
+- [x] ✅ Published to PSGallery
 
-### 🔮 Phase 3 — Ecosystem (v0.3.0+)
+### ✅ Phase 3 — Easy Buttons (v0.3.0) — SHIPPED
+- [x] `Start-TCMMonitoring` — guided setup wizard (zero to monitoring in one command)
+- [x] `Watch-TCMDrift` — daily drift check (console / HTML / Maester modes)
+- [x] `Update-TCMBaseline` — rebaseline after approved changes
+- [x] `Compare-TCMBaseline` — detect new/deleted resources + file-based cache
+- [x] Improved Maester test generation with `Add-MtTestResultDetail`
+- [x] GitHub Pages documentation site
+
+### 🔮 Phase 4 — Ecosystem (v0.4.0+)
 - [ ] Propose TCM data source to maester365/maester community
 - [ ] Remediation script generation (`Repair-TCMDrift`)
 - [ ] Multi-tenant comparison (`Compare-TCMTenant`)
+- [ ] CIS/CISA baseline templates
+- [ ] Teams adaptive card notifications
 - [ ] Multi-cloud support (GCC, China, Germany)
 - [ ] EntraExporter integration
 

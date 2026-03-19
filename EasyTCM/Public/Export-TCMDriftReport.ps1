@@ -17,8 +17,15 @@ function Export-TCMDriftReport {
         Open the report in the default browser after generating.
     .PARAMETER MonitorId
         Report on a specific monitor. If omitted, reports on all monitors.
+    .PARAMETER CompareBaseline
+        Also detect new/deleted resources by running Compare-TCMBaseline.
+        This takes a fresh snapshot (uses quota) and adds a Baseline Drift
+        section to the report. Without this flag, only property drifts on
+        existing monitored resources are shown.
     .EXAMPLE
         Export-TCMDriftReport -Open
+    .EXAMPLE
+        Export-TCMDriftReport -Open -CompareBaseline
     .EXAMPLE
         Export-TCMDriftReport -OutputPath "./reports/drift-report.html" -MonitorId $id
     #>
@@ -28,7 +35,9 @@ function Export-TCMDriftReport {
 
         [switch]$Open,
 
-        [string]$MonitorId
+        [string]$MonitorId,
+
+        [switch]$CompareBaseline
     )
 
     $timestamp = Get-Date -Format 'yyyy-MM-dd_HHmmss'
@@ -48,6 +57,15 @@ function Export-TCMDriftReport {
 
     $drifts = @(Get-TCMDrift)
     $quota = Get-TCMQuota -PassThru
+
+    # Optional: run Compare-TCMBaseline to detect new/deleted resources
+    $baselineComparison = $null
+    if ($CompareBaseline) {
+        Write-Host 'Running baseline comparison (takes a snapshot)...' -ForegroundColor Cyan
+        $compareParams = @{ Detailed = $true }
+        if ($MonitorId) { $compareParams.MonitorId = $MonitorId }
+        $baselineComparison = Compare-TCMBaseline @compareParams
+    }
 
     # Build monitor details with baselines
     $monitorData = foreach ($m in $monitors) {
@@ -162,6 +180,36 @@ function Export-TCMDriftReport {
         }
     }
 
+    # Build baseline drift HTML section
+    $baselineDriftSection = ''
+    if ($baselineComparison) {
+        $blNewRows = ''
+        foreach ($r in $baselineComparison.NewResources) {
+            $shortType = ($r.ResourceType -split '\.')[-1]
+            $portalLink = if ($portalLinks.ContainsKey($r.ResourceType)) { $portalLinks[$r.ResourceType] } else { '#' }
+            $blNewRows += "<tr><td><span class='badge badge-active'>+ New</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.DisplayName ?? $r.Id))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td><a href='$portalLink' target='_blank' class='portal-link'>Open Portal &#8599;</a></td></tr>"
+        }
+        foreach ($r in $baselineComparison.DeletedResources) {
+            $shortType = ($r.ResourceType -split '\.')[-1]
+            $portalLink = if ($portalLinks.ContainsKey($r.ResourceType)) { $portalLinks[$r.ResourceType] } else { '#' }
+            $blNewRows += "<tr><td><span class='badge badge-inactive'>- Deleted</span></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.DisplayName ?? $r.Id))</td><td><code>$([System.Web.HttpUtility]::HtmlEncode($shortType))</code></td><td>$([System.Web.HttpUtility]::HtmlEncode($r.Id))</td><td><a href='$portalLink' target='_blank' class='portal-link'>Open Portal &#8599;</a></td></tr>"
+        }
+        if (-not $blNewRows) {
+            $blNewRows = '<tr><td colspan="5" class="center no-drift">No new or deleted resources detected. Baseline coverage is complete.</td></tr>'
+        }
+        $blSummary = "$($baselineComparison.NewCount) new, $($baselineComparison.DeletedCount) deleted, $($baselineComparison.MatchedCount) matched (baseline: $($baselineComparison.BaselineCount), current: $($baselineComparison.CurrentCount))"
+        $baselineDriftSection = @"
+  <section>
+    <h2>&#128200; Baseline Drift (New / Deleted Resources)</h2>
+    <p style='color:#666;font-size:0.9rem;margin-bottom:1rem'>$blSummary</p>
+    <table>
+      <thead><tr><th>Status</th><th>Resource</th><th>Type</th><th>Id</th><th>Portal</th></tr></thead>
+      <tbody>$blNewRows</tbody>
+    </table>
+  </section>
+"@
+    }
+
     $html = @"
 <!DOCTYPE html>
 <html lang="en">
@@ -258,6 +306,8 @@ function Export-TCMDriftReport {
     </table>
   </section>
 
+  $baselineDriftSection
+
   <section>
     <h2>&#128270; Monitors &amp; Baseline Resources</h2>
     <table>
@@ -280,6 +330,11 @@ function Export-TCMDriftReport {
 
     if ($Open) {
         Start-Process $OutputPath
+    }
+
+    if (-not $CompareBaseline) {
+        Write-Host ''
+        Write-Host 'Tip: Use -CompareBaseline to also detect new/deleted resources (takes a snapshot).' -ForegroundColor DarkGray
     }
 
     [PSCustomObject]@{

@@ -29,11 +29,21 @@ function Sync-TCMDriftToMaester {
         Sync drifts from a specific monitor. If omitted, syncs all active drifts.
     .PARAMETER IncludeFixed
         Also include recently fixed drifts (for audit trail).
+    .PARAMETER CompareBaseline
+        Also detect new/deleted resources by running Compare-TCMBaseline.
+        This takes a fresh snapshot (uses quota) and generates an additional
+        Maester test suite for baseline drift. Without this flag, only property
+        drifts on existing monitored resources are synced.
     .PARAMETER PassThru
         Also return the drift summary objects.
     .EXAMPLE
         # Sync all TCM drifts — then run Maester normally
         Sync-TCMDriftToMaester
+        Invoke-Maester
+
+    .EXAMPLE
+        # Full sync including new/deleted resources
+        Sync-TCMDriftToMaester -CompareBaseline
         Invoke-Maester
 
     .EXAMPLE
@@ -48,6 +58,8 @@ function Sync-TCMDriftToMaester {
         [string]$MonitorId,
 
         [switch]$IncludeFixed,
+
+        [switch]$CompareBaseline,
 
         [switch]$PassThru
     )
@@ -223,6 +235,64 @@ function Sync-TCMDriftToMaester {
     else {
         Write-Host "✅ No active drifts. All $($summaries.Count) monitors are clean." -ForegroundColor Green
         Write-Host "   Run: Invoke-Maester -Path '$OutputPath'" -ForegroundColor DarkGray
+    }
+
+    # Optional: run Compare-TCMBaseline and generate a baseline drift suite
+    if ($CompareBaseline) {
+        Write-Host ''
+        Write-Host '🔗 Running baseline comparison (takes a snapshot)...' -ForegroundColor Cyan
+        $compareParams = @{ Detailed = $true }
+        if ($MonitorId) { $compareParams.MonitorId = $MonitorId }
+        $comparison = Compare-TCMBaseline @compareParams
+
+        if ($comparison -and ($comparison.NewCount -gt 0 -or $comparison.DeletedCount -gt 0)) {
+            $blSuitePath = Join-Path $OutputPath 'TCM-BaselineDrift'
+            if (-not (Test-Path $blSuitePath)) {
+                New-Item -Path $blSuitePath -ItemType Directory -Force | Out-Null
+            }
+
+            # baseline.json = empty (no expected new/deleted resources)
+            # current.json = new and deleted resources as entries
+            $blBaseline = @{}
+            $blCurrent = @{}
+
+            foreach ($r in $comparison.NewResources) {
+                $key = "NEW::$($r.ResourceType)::$($r.Id)"
+                $blCurrent[$key] = @{
+                    status       = 'New'
+                    resourceType = $r.ResourceType
+                    displayName  = $r.DisplayName
+                    id           = $r.Id
+                }
+            }
+            foreach ($r in $comparison.DeletedResources) {
+                $key = "DELETED::$($r.ResourceType)::$($r.Id)"
+                $blBaseline[$key] = @{
+                    status       = 'Expected'
+                    resourceType = $r.ResourceType
+                    displayName  = $r.DisplayName
+                    id           = $r.Id
+                }
+            }
+
+            $blBaseline | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $blSuitePath 'baseline.json') -Encoding utf8
+            $blCurrent  | ConvertTo-Json -Depth 10 | Set-Content -Path (Join-Path $blSuitePath 'current.json') -Encoding utf8
+            @{
+                Source    = 'EasyTCM-CompareBaseline'
+                SyncedAt  = (Get-Date -Format 'o')
+                NewCount  = $comparison.NewCount
+                DeletedCount = $comparison.DeletedCount
+            } | ConvertTo-Json | Set-Content -Path (Join-Path $blSuitePath 'settings.json') -Encoding utf8
+
+            Write-Host "  ⚠️  Baseline drift: $($comparison.NewCount) new, $($comparison.DeletedCount) deleted → $blSuitePath" -ForegroundColor Yellow
+        }
+        else {
+            Write-Host '  ✅ No baseline drift (no new or deleted resources).' -ForegroundColor Green
+        }
+    }
+    else {
+        Write-Host ''
+        Write-Host 'Tip: Use -CompareBaseline to also detect new/deleted resources (takes a snapshot).' -ForegroundColor DarkGray
     }
 
     if ($PassThru) { $summaries }

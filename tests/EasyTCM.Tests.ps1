@@ -27,6 +27,7 @@ Describe 'EasyTCM Module' {
             'Get-TCMDrift'
             'Get-TCMMonitoringResult'
             'Export-TCMDriftReport'
+            'Compare-TCMBaseline'
             'Get-TCMQuota'
             'Sync-TCMDriftToMaester'
         )
@@ -162,5 +163,19 @@ Describe 'New-TCMSnapshot defaults' {
         # Neither should be mandatory
         $resourcesParam.Attributes.Mandatory | Should -Not -Contain $true
         $workloadsParam.Attributes.Mandatory | Should -Not -Contain $true
+    }
+}
+
+Describe 'Compare-TCMBaseline' {
+    It 'should have expected parameters' {
+        $cmd = Get-Command Compare-TCMBaseline -Module EasyTCM
+        $cmd.Parameters.Keys | Should -Contain 'MonitorId'
+        $cmd.Parameters.Keys | Should -Contain 'Detailed'
+        $cmd.Parameters.Keys | Should -Contain 'KeepSnapshot'
+    }
+
+    It 'should support ShouldProcess (WhatIf)' {
+        $cmd = Get-Command Compare-TCMBaseline -Module EasyTCM
+        $cmd.Parameters.Keys | Should -Contain 'WhatIf'
     }
 }

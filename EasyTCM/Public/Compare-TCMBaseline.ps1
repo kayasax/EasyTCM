@@ -136,13 +136,22 @@ function Compare-TCMBaseline {
 
     Write-Host "  Snapshot: $($snapshotResources.Count) resources returned" -ForegroundColor DarkGray
 
-    # 6. Build lookup tables keyed by resourceType + Properties.Id
+    # 6. Build lookup tables keyed by resourceType + unique identifier
+    #    Fallback chain: Properties.Id → Identity → Name → top-level displayName
+    #    Some types (transportrule, dlpcompliancepolicy) lack Id/Identity but have Name.
     $baselineLookup = @{}
     foreach ($r in $baselineResources) {
         $rt = if ($r -is [System.Collections.IDictionary]) { $r['ResourceType'] ?? $r['resourceType'] } else { $r.ResourceType ?? $r.resourceType }
         $props = if ($r -is [System.Collections.IDictionary]) { $r['Properties'] ?? $r['properties'] } else { $r.Properties ?? $r.properties }
-        $id = if ($props -is [System.Collections.IDictionary]) { $props['Id'] ?? $props['id'] ?? $props['Identity'] ?? $props['identity'] }
-              else { $props.Id ?? $props.id ?? $props.Identity ?? $props.identity }
+        $id = if ($props -is [System.Collections.IDictionary]) {
+            $props['Id'] ?? $props['id'] ?? $props['Identity'] ?? $props['identity'] ?? $props['Name'] ?? $props['name']
+        } else {
+            $props.Id ?? $props.id ?? $props.Identity ?? $props.identity ?? $props.Name ?? $props.name
+        }
+        if (-not $id) {
+            $id = if ($r -is [System.Collections.IDictionary]) { $r['DisplayName'] ?? $r['displayName'] } else { $r.DisplayName ?? $r.displayName }
+            if ($id -and $id.Length -gt 128) { $id = $id.Substring(0, 128) }
+        }
         $dn = if ($props -is [System.Collections.IDictionary]) { $props['DisplayName'] ?? $props['displayName'] ?? $props['Name'] ?? $props['name'] }
               else { $props.DisplayName ?? $props.displayName ?? $props.Name ?? $props.name }
 
@@ -154,8 +163,15 @@ function Compare-TCMBaseline {
     foreach ($r in $snapshotResources) {
         $rt = if ($r -is [System.Collections.IDictionary]) { $r['resourceType'] ?? $r['ResourceType'] } else { $r.resourceType ?? $r.ResourceType }
         $props = if ($r -is [System.Collections.IDictionary]) { $r['properties'] ?? $r['Properties'] } else { $r.properties ?? $r.Properties }
-        $id = if ($props -is [System.Collections.IDictionary]) { $props['Id'] ?? $props['id'] ?? $props['Identity'] ?? $props['identity'] }
-              else { $props.Id ?? $props.id ?? $props.Identity ?? $props.identity }
+        $id = if ($props -is [System.Collections.IDictionary]) {
+            $props['Id'] ?? $props['id'] ?? $props['Identity'] ?? $props['identity'] ?? $props['Name'] ?? $props['name']
+        } else {
+            $props.Id ?? $props.id ?? $props.Identity ?? $props.identity ?? $props.Name ?? $props.name
+        }
+        if (-not $id) {
+            $id = if ($r -is [System.Collections.IDictionary]) { $r['displayName'] ?? $r['DisplayName'] } else { $r.displayName ?? $r.DisplayName }
+            if ($id -and $id.Length -gt 128) { $id = $id.Substring(0, 128) }
+        }
         $dn = if ($props -is [System.Collections.IDictionary]) { $props['DisplayName'] ?? $props['displayName'] ?? $props['Name'] ?? $props['name'] }
               else { $props.DisplayName ?? $props.displayName ?? $props.Name ?? $props.name }
 

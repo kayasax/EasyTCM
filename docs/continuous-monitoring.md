@@ -226,35 +226,191 @@ Updating monitor baseline...
 
 ---
 
-## Automation Ideas
+## Automating Drift Checks
 
-### Scheduled Daily Report (Task Scheduler / Cron)
+TCM already monitors your tenant server-side every 6 hours automatically — you don't need to schedule that part. What you **do** want to automate is **reading the results** and **alerting** when drift is found.
+
+Here are production-ready approaches, from simplest to most complete.
+
+---
+
+### Option 1: Windows Task Scheduler (Simplest)
+
+Run a daily drift check on your admin workstation or a jump server.
+
+**Create the script** — save as `C:\Scripts\daily-drift-check.ps1`:
 
 ```powershell
 # daily-drift-check.ps1
-Connect-MgGraph -Identity  # Use managed identity or certificate
+# Runs as a scheduled task to check TCM drift and generate an HTML report
+
+# Certificate-based auth — no interactive login needed
+Connect-MgGraph -ClientId 'YOUR-APP-ID' `
+                -TenantId 'YOUR-TENANT-ID' `
+                -CertificateThumbprint 'YOUR-CERT-THUMBPRINT' `
+                -NoWelcome
+
 Import-Module EasyTCM
+
+# Generate time-stamped HTML report
+$reportPath = "C:\Reports\EasyTCM-$(Get-Date -Format 'yyyy-MM-dd').html"
 Watch-TCMDrift -Report
+
+# Fail loudly if drift is found
+$drifts = Watch-TCMDrift -PassThru
+if ($drifts.Count -gt 0) {
+    # Write to Windows Event Log for SIEM pickup
+    Write-EventLog -LogName Application -Source 'EasyTCM' `
+        -EntryType Warning -EventId 1001 `
+        -Message "$($drifts.Count) active drift(s) detected in M365 tenant."
+}
 ```
 
-### CI/CD Pipeline Integration
+**Register the scheduled task:**
+
+```powershell
+# Run once in an elevated PowerShell
+$action = New-ScheduledTaskAction -Execute 'pwsh.exe' `
+    -Argument '-NoProfile -File C:\Scripts\daily-drift-check.ps1'
+$trigger = New-ScheduledTaskTrigger -Daily -At '8:00 AM'
+$settings = New-ScheduledTaskSettingsSet -StartWhenAvailable
+
+Register-ScheduledTask -TaskName 'EasyTCM Daily Drift Check' `
+    -Action $action -Trigger $trigger -Settings $settings `
+    -Description 'Check M365 tenant for configuration drift'
+```
+
+> **Auth note:** Certificate-based app registration is required so the script runs without interactive login. See [Microsoft Graph certificate auth docs](https://learn.microsoft.com/en-us/powershell/microsoftgraph/authentication-commands) for setup.
+
+---
+
+### Option 2: Azure Automation Runbook (No Servers)
+
+Fully managed, cloud-hosted — no infrastructure to maintain.
+
+**1. Create** an Azure Automation account with a System Managed Identity.
+
+**2. Grant** the managed identity the `ConfigurationMonitoring.ReadWrite.All` Graph permission.
+
+**3. Import modules** in Automation → Modules: `Microsoft.Graph.Authentication` and `EasyTCM`.
+
+**4. Create the runbook** (PowerShell 7.2+):
+
+```powershell
+# Runbook: Check-TenantDrift
+Connect-MgGraph -Identity -NoWelcome
+Import-Module EasyTCM
+
+$drifts = Watch-TCMDrift -PassThru
+
+if ($drifts.Count -gt 0) {
+    Write-Output "⚠️ $($drifts.Count) active drift(s) detected!"
+    foreach ($d in $drifts) {
+        Write-Output "  - $($d.ResourceType): $($d.ResourceDisplay) ($($d.DriftedPropertyCount) changes)"
+    }
+
+    # Optional: send to Teams via webhook
+    # $webhookUri = Get-AutomationVariable -Name 'TeamsWebhookUri'
+    # $body = @{ text = "EasyTCM: $($drifts.Count) drift(s) detected" } | ConvertTo-Json
+    # Invoke-RestMethod -Uri $webhookUri -Method Post -Body $body -ContentType 'application/json'
+}
+else {
+    Write-Output "✅ No active drift."
+}
+```
+
+**5. Schedule** the runbook daily (or every 6 hours to match TCM's cycle).
+
+---
+
+### Option 3: GitHub Actions (CI/CD Gate)
+
+Block deployments or raise alerts when drift exists.
 
 ```yaml
-# GitHub Actions example
-- name: Check M365 drift
-  run: |
-    Install-Module EasyTCM -Force -Scope CurrentUser
-    Connect-MgGraph -ClientId ${{ secrets.APP_ID }} -TenantId ${{ secrets.TENANT_ID }} -CertificateThumbprint ${{ secrets.CERT_THUMB }}
-    $drifts = Watch-TCMDrift -PassThru
-    if ($drifts.Count -gt 0) {
-      Write-Error "❌ $($drifts.Count) active drift(s) detected!"
-      exit 1
-    }
+# .github/workflows/drift-check.yml
+name: M365 Drift Check
+on:
+  schedule:
+    - cron: '0 8 * * *'     # Daily at 8 AM UTC
+  workflow_dispatch:          # Manual trigger
+
+jobs:
+  check-drift:
+    runs-on: windows-latest
+    steps:
+      - name: Install modules
+        shell: pwsh
+        run: |
+          Install-Module Microsoft.Graph.Authentication -Force -Scope CurrentUser
+          Install-Module EasyTCM -Force -Scope CurrentUser
+
+      - name: Check for drift
+        shell: pwsh
+        env:
+          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          CERT_THUMBPRINT: ${{ secrets.APP_CERT_THUMBPRINT }}
+        run: |
+          Connect-MgGraph -ClientId $env:APP_CLIENT_ID `
+                          -TenantId $env:AZURE_TENANT_ID `
+                          -CertificateThumbprint $env:CERT_THUMBPRINT `
+                          -NoWelcome
+
+          Import-Module EasyTCM
+          $drifts = Watch-TCMDrift -PassThru
+
+          if ($drifts.Count -gt 0) {
+            foreach ($d in $drifts) {
+              Write-Output "::error::$($d.ResourceType) - $($d.ResourceDisplay): $($d.DriftedPropertyCount) changed properties"
+            }
+            exit 1
+          }
+          Write-Output "✅ No active drift"
+
+      - name: Upload report on failure
+        if: failure()
+        shell: pwsh
+        run: |
+          Import-Module EasyTCM
+          Watch-TCMDrift -Report
+
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: drift-report
+          path: EasyTCM-Report*.html
 ```
 
-### Teams Notification (coming soon)
+---
 
-Planned for a future release — webhook-based alerts when new drift is detected.
+### Option 4: Add Drift to Existing Maester Automation
+
+If you already run Maester on a schedule (Automation, GitHub Actions, etc.), just add two lines before `Invoke-Maester`:
+
+```powershell
+# Add to your existing Maester automation script:
+Import-Module EasyTCM
+Sync-TCMDriftToMaester    # generates drift tests in your Maester folder
+
+# Then run Maester as usual — drift results appear alongside 400+ security checks
+Invoke-Maester -OutputHtmlFile 'MaesterReport.html'
+```
+
+No separate automation needed — drift checks ride along with your existing Maester pipeline.
+
+---
+
+### Choosing an Approach
+
+| Approach | Best For | Requires |
+|----------|----------|----------|
+| **Task Scheduler** | Single admin, jump server | Windows machine, cert auth |
+| **Azure Automation** | Production, no servers | Azure subscription, managed identity |
+| **GitHub Actions** | DevOps teams, CI/CD gates | GitHub repo, cert in secrets |
+| **Maester pipeline** | Already running Maester | Your existing Maester setup |
+
+> All automated approaches require **certificate-based or managed identity authentication**. Interactive login won't work in unattended scenarios.
 
 ---
 

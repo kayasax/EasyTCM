@@ -7,7 +7,7 @@
     RootModule        = 'EasyTCM.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.2.0'
+    ModuleVersion     = '0.3.0'
 
     # ID used to uniquely identify this module
     GUID              = 'a3f7c8d2-5e1b-4a9f-b0c6-d8e2f1a4b5c7'
@@ -56,6 +56,10 @@
         'Get-TCMQuota'
         # Maester Bridge
         'Sync-TCMDriftToMaester'
+        # Easy Buttons
+        'Start-TCMMonitoring'
+        'Watch-TCMDrift'
+        'Update-TCMBaseline'
     )
 
     # Cmdlets to export from this module
@@ -73,7 +77,7 @@
             Tags         = @('TCM', 'TenantConfiguration', 'Microsoft365', 'Maester', 'Drift', 'ConfigurationManagement', 'MicrosoftGraph')
             LicenseUri   = 'https://github.com/kayasax/EasyTCM/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/kayasax/EasyTCM'
-            ReleaseNotes = 'v0.2.0: Security & Compliance workload (24 types), enhanced Get-TCMMonitor with baseline summary, Initialize-TCM auto-grants SC prerequisites, Recommended profile expanded to 30 types.'
+            ReleaseNotes = 'v0.3.0: Easy-button cmdlets — Start-TCMMonitoring (guided setup wizard), Watch-TCMDrift (daily drift check with console/HTML/Maester modes), Update-TCMBaseline (rebaseline after approved changes). File-based comparison cache, improved Maester test generation with Add-MtTestResultDetail.'
         }
     }
 }

@@ -38,6 +38,7 @@ Session_starter.md
 
 # Generated reports and drift data (tenant-specific)
 EasyTCM-Report*.html
+tests/Maester/
 test-results/
 tests/Maester/
 sc-types.txt

@@ -50,7 +50,7 @@ jobs:
         shell: pwsh
         run: |
           $config = New-PesterConfiguration
-          $config.Run.Path = './tests'
+          $config.Run.Path = './tests/EasyTCM.test.ps1'
           $config.TestResult.Enabled = $true
           $config.TestResult.OutputPath = './TestResults/results.xml'
           $config.TestResult.OutputFormat = 'JUnitXml'

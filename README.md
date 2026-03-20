@@ -1,10 +1,7 @@
 <p align="center">
   <h1 align="center">🛡️ EasyTCM</h1>
   <p align="center">
-    <strong>Simplify Microsoft 365 Tenant Configuration Management</strong>
-  </p>
-  <p align="center">
-    The <a href="https://github.com/kayasax/EasyPIM">EasyPIM</a> approach — applied to Microsoft's new <a href="https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview">Tenant Configuration Management (TCM) APIs</a>.
+    <strong>Stop Microsoft 365 tenant drift before it becomes a breach.</strong>
   </p>
   <p align="center">
     <a href="https://www.powershellgallery.com/packages/EasyTCM"><img src="https://img.shields.io/powershellgallery/v/EasyTCM?label=PSGallery&logo=powershell&color=blue" alt="PSGallery Version"></a>
@@ -16,304 +13,169 @@
 
 ---
 
-## 💡 Why EasyTCM?
+Someone changes a Conditional Access policy. A transport rule gets modified. An auth method is disabled. **You don't know until something breaks — or fails an audit.**
 
-Microsoft's [Tenant Configuration Management (TCM)](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) APIs (public preview) let you **monitor configuration drift** and **snapshot tenant settings** across 6 workloads — but the raw Graph beta API is complex, requires multi-layer authentication, and offers no built-in reporting or remediation.
+Microsoft's new [TCM APIs](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) monitor your tenant configuration server-side every 6 hours across Entra, Exchange, Intune, Teams, and Security & Compliance. EasyTCM makes them accessible through 3 simple commands.
 
-**EasyTCM** transforms that complexity into simple PowerShell cmdlets:
+## 🚀 Three Commands. That's It.
 
-| Pain Point | EasyTCM Solution |
-|---|---|
-| 🔧 Complex service principal setup with dual auth layers | `Initialize-TCM` — one command to set up everything |
-| 📝 Hand-crafting JSON baselines from 100s of resource types | `ConvertTo-TCMBaseline` — snapshot your current config, convert to baseline |
-| 📊 No reporting — raw JSON drifts in Graph API | `Export-TCMDriftReport` — HTML reports with remediation links |
-| 🔢 Easy to blow API quotas (800 resources/day, 20k/month) | `Get-TCMQuota` + monitoring profiles (`-Profile SecurityCritical`) — monitor what matters, not everything |
-| 🔗 No integration with community security tools | `Sync-TCMDriftToMaester` — bridge to Maester test framework |
+```powershell
+Install-Module EasyTCM
+
+# 1. Setup (one time — guided wizard handles everything)
+Start-TCMMonitoring
+
+# 2. Check for drift (daily)
+Watch-TCMDrift
+
+# 3. After approved changes, accept the new state
+Update-TCMBaseline
+```
+
+### What Each Command Does
+
+**`Start-TCMMonitoring`** — Guided wizard: connects to Graph, creates the TCM service principal, snapshots your tenant, builds a security-focused baseline, creates a monitor. Zero to monitoring in one run.
+
+**`Watch-TCMDrift`** — Your daily command:
+```powershell
+Watch-TCMDrift                    # quick console summary
+Watch-TCMDrift -Report            # HTML dashboard with admin portal links
+Watch-TCMDrift -Maester           # pipe results into Maester test framework
+Watch-TCMDrift -CompareBaseline   # also catch new/deleted resources
+```
+
+**`Update-TCMBaseline`** — After you verify drift is from approved changes, rebaseline with one command. Shows current drift for review, takes fresh snapshot, updates the monitor.
 
 ---
 
-## 🎯 What Makes EasyTCM Different
+## 📸 See It In Action
 
-- **Snap → Monitor → Report** — The simplest path from zero to continuous tenant monitoring
-- **Snapshot-to-Baseline Converter** — Nobody else does this. Take your current config as the known-good state and start monitoring in seconds
-- **Quota-Aware** — Built-in profiles (SecurityCritical, Recommended, Full) + real-time quota dashboard. Never waste quota on configs that don't matter
-- **Security-Standard Templates** — Pre-built baselines aligned to CIS Benchmarks and CISA SCuBA
-- **Maester Bridge** — Use TCM's server-side monitoring as Maester's drift detection backend
-- **Multi-Tenant Ready** — Compare configurations across tenants for MSPs and large enterprises
+**Console drift check:**
+
+```
+🔍 Checking for configuration drift...
+
+  ⚠️  3 active drift(s) detected!
+
+  conditionalaccesspolicy (2):
+    • Block Legacy Auth — 1 changed property
+      state: enabled → disabled
+    • Require MFA for Admins — 1 changed property
+      excludeUsers: [] → ["breakglass@contoso.com"]
+
+  namedlocation (1):
+    • Corporate Network — 1 changed property
+      ipRanges: ["10.0.0.0/8"] → ["10.0.0.0/8","192.168.0.0/16"]
+```
+
+**HTML drift report with remediation links:**
+
+![EasyTCM HTML Drift Report](docs/images/drift-report.png)
+
+**Maester integration — drift as test results:**
+
+![Maester detecting TCM drift](docs/images/maester-drift.png)
 
 ---
 
-## 🚀 Quick Start
+## 📦 Install
 
 ```powershell
-# 1. Install
-Install-Module -Name EasyTCM -Scope CurrentUser
-
-# 2. Connect to Microsoft Graph
-Connect-MgGraph -Scopes 'ConfigurationMonitoring.ReadWrite.All'
-
-# 3. One-time setup (registers TCM service principal + grants all workload permissions)
-Initialize-TCM
-
-# 4. Snapshot your entire tenant configuration
-$snapshot = New-TCMSnapshot -DisplayName 'Initial baseline' -Wait
-
-# 5. Convert snapshot to baseline (the magic step)
-$baseline = $snapshot | ConvertTo-TCMBaseline
-
-# 6. Create a monitor — TCM will check every 6 hours
-New-TCMMonitor -Name 'Production Baseline' -Baseline $baseline
-
-# 7. Check for drifts
-Get-TCMDrift | Format-Table Workload, ResourceType, Property, Expected, Actual
-
-# 8. Feed drifts into Maester — then run Invoke-Maester as usual
-Sync-TCMDriftToMaester
+Install-Module EasyTCM -Scope CurrentUser
 ```
-
-### See it in action
-
-**Drift detected — property-level details:**
-
-![Get-TCMDrift output showing detected configuration drift](docs/images/get-tcm-drift.png)
-
-**Real-time quota dashboard:**
-
-![Get-TCMQuota showing monitor and resource usage](docs/images/get-tcm-quota.png)
-
----
-
-## 📦 Installation
-
-### From PowerShell Gallery (Recommended)
-
-```powershell
-Install-Module -Name EasyTCM -Scope CurrentUser -Force
-```
-
-### From Source
-
-```powershell
-git clone https://github.com/kayasax/EasyTCM.git
-Import-Module ./EasyTCM/EasyTCM/EasyTCM.psd1
-```
-
-### Requirements
 
 | Requirement | Details |
 |---|---|
-| PowerShell | 5.1+ (Windows) or 7.0+ (Cross-platform) |
-| Modules | `Microsoft.Graph.Authentication` (auto-installed) |
-| Permissions | `ConfigurationMonitoring.ReadWrite.All` or privileged Entra role |
-| Tenant | TCM service principal registered (handled by `Initialize-TCM`) |
+| PowerShell | 5.1+ or 7.0+ |
+| Graph module | `Microsoft.Graph.Authentication` (auto-installed) |
+| Permissions | Global Admin for initial setup, then `ConfigurationMonitoring.ReadWrite.All` |
 
 ---
 
-## 📖 Documentation
+## 📖 Learn More
 
-| Document | Description |
+| | |
 |---|---|
-| **[Getting Started](docs/GETTING-STARTED.md)** | Step-by-step guide: install → setup → first monitor in 10 minutes |
-| **[📖 Documentation Site](https://kayasax.github.io/EasyTCM/)** | Full narrative: problem → solution → Maester → continuous monitoring |
-| [Maester Integration](https://kayasax.github.io/EasyTCM/maester-integration) | Turn TCM into Maester's drift detection backend |
-| [Continuous Monitoring](https://kayasax.github.io/EasyTCM/continuous-monitoring) | Setup → daily checks → rebaselining lifecycle |
-| [Product Vision & Roadmap](docs/VISION.md) | Where we're going and why |
-| [Contributing](CONTRIBUTING.md) | How to contribute cmdlets, templates, and fixes |
+| **[📖 Full Documentation](https://kayasax.github.io/EasyTCM/)** | **The complete story: problem → solution → Maester → automation** |
+| [Maester Integration](https://kayasax.github.io/EasyTCM/maester-integration) | Why & how to combine TCM + Maester for unified security reporting |
+| [Continuous Monitoring & Automation](https://kayasax.github.io/EasyTCM/continuous-monitoring) | Daily checks → rebaselining → Task Scheduler / Azure Automation / GitHub Actions |
+| [Getting Started (Advanced)](docs/GETTING-STARTED.md) | Step-by-step guide with granular control over each cmdlet |
 | [Changelog](CHANGELOG.md) | Version history |
 
 ---
 
-## 🎯 Cmdlets — v0.3.0 (19 shipped)
+## 🔧 All 19 Cmdlets
 
-### Setup & Authentication
+<details>
+<summary>Click to expand the full cmdlet reference</summary>
+
+### Easy Buttons (v0.3.0)
 
 | Cmdlet | Description |
 |---|---|
-| `Initialize-TCM` | Register TCM service principal, grant workload permissions, validate setup |
+| `Start-TCMMonitoring` | Guided wizard: connect → setup → snapshot → baseline → monitor |
+| `Watch-TCMDrift` | Daily drift check: console, `-Report` HTML, `-Maester` tests |
+| `Update-TCMBaseline` | Rebaseline after approved changes |
+
+### Setup
+
+| Cmdlet | Description |
+|---|---|
+| `Initialize-TCM` | Register TCM service principal, grant permissions |
 | `Test-TCMConnection` | Verify authentication and TCM readiness |
 
 ### Snapshots
 
 | Cmdlet | Description |
 |---|---|
-| `New-TCMSnapshot` | Create a snapshot job with workload shortcuts and optional `-Wait` |
-| `Get-TCMSnapshot` | Retrieve snapshot jobs with optional `-IncludeContent` |
+| `New-TCMSnapshot` | Snapshot tenant config with workload shortcuts + `-Wait` |
+| `Get-TCMSnapshot` | Retrieve snapshots with optional `-IncludeContent` |
 | `Remove-TCMSnapshot` | Delete a snapshot job |
-| `ConvertTo-TCMBaseline` | ⭐ **Snapshot → baseline with smart profiles** — SecurityCritical (default), Recommended, or Full |
+| `ConvertTo-TCMBaseline` | Snapshot → baseline with profiles (SecurityCritical / Recommended / Full) |
 
 ### Monitors
 
 | Cmdlet | Description |
 |---|---|
-| `New-TCMMonitor` | Create a configuration monitor with quota-aware warnings |
-| `Get-TCMMonitor` | List and retrieve monitor details with optional baseline |
-| `Update-TCMMonitor` | Update a monitor's baseline (⚠️ deletes existing drifts) |
+| `New-TCMMonitor` | Create a monitor with quota-aware warnings |
+| `Get-TCMMonitor` | List monitors with baseline summary |
+| `Update-TCMMonitor` | Update baseline (⚠️ deletes existing drifts) |
 | `Remove-TCMMonitor` | Delete a monitor |
 
-### Drift Detection, Reporting & Quota
+### Drift & Reporting
 
 | Cmdlet | Description |
 |---|---|
-| `Get-TCMDrift` | Enriched drifts with workload classification, filtering |
-| `Get-TCMMonitoringResult` | Monitor cycle results — run status, timing, drift counts, next-run estimate |
-| `Export-TCMDriftReport` | ⭐ **HTML dashboard** with quota bars, property-level diffs, admin portal deep links |
-| `Get-TCMQuota` | Real-time quota dashboard (monitors, resources, snapshots) |
+| `Get-TCMDrift` | Enriched drifts with workload classification |
+| `Get-TCMMonitoringResult` | Monitor cycle status and timing |
+| `Export-TCMDriftReport` | HTML dashboard with admin portal deep links |
+| `Compare-TCMBaseline` | Detect new/deleted resources not in baseline |
+| `Get-TCMQuota` | Real-time quota dashboard |
 
-![EasyTCM HTML Drift Report](docs/images/drift-report.png)
-
-### 🔗 Maester Bridge (North Star)
-
-| Cmdlet | Description |
-|---|---|
-| `Sync-TCMDriftToMaester` | Generate Maester-compatible drift suites — MT.1060 picks them up natively, zero Maester modification needed |
-
-![Maester MT.1060 detecting TCM drift](docs/images/maester-drift.png)
-
-#### 🚀 Easy Buttons (v0.3.0) — Zero-to-Monitoring in One Command
+### Maester Bridge
 
 | Cmdlet | Description |
 |---|---|
-| `Start-TCMMonitoring` | Guided wizard: connect → setup → snapshot → baseline → monitor. One command to start. |
-| `Watch-TCMDrift` | Daily drift check: console summary, `-Report` for HTML, `-Maester` for test results |
-| `Update-TCMBaseline` | After approved changes, take a fresh snapshot and update the baseline |
+| `Sync-TCMDriftToMaester` | Generate Maester-compatible drift test suites |
 
-**[📖 Continuous Monitoring Guide](https://kayasax.github.io/EasyTCM/continuous-monitoring)** — Full lifecycle documentation.
-
-#### 🔮 Planned
-
-| Cmdlet | Target | Description |
-|---|---|---|
-| `Repair-TCMDrift` | v0.4 | Generate remediation scripts from detected drifts |
-| `Compare-TCMTenant` | v0.4 | Compare configurations across two tenants |
-| Baseline Templates | v0.4 | CIS/CISA pre-built baselines via `-Template` parameter |
+</details>
 
 ---
 
-## 📊 TCM Workload Coverage
+## 🌐 Coverage
 
-EasyTCM wraps TCM's workload support (62 validated resource types):
-
-| Workload | Types | Examples |
-|---|---|---|
-| **Microsoft Entra** | 10 | Conditional Access, Auth Methods, Named Locations, Cross-tenant Access, Authorization Policy |
-| **Microsoft Exchange** | 18 | Transport Rules, Accepted Domains, Anti-phishing, Anti-spam, DKIM, Connectors |
-| **Microsoft Intune** | 1 | Device Configuration |
-| **Microsoft Teams** | 9 | Meeting Policies, Messaging Policies, Federation, App Permission Policies |
-| **Security & Compliance** | 24 | DLP Policies, Retention Policies, Sensitivity Labels, Compliance Tags, Case Hold, Supervision |
-
-Full resource type list: [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json)
-
----
-
-## ⚠️ TCM Quota Reality (Why Profiles Matter)
-
-| Resource | Limit | What it means |
-|---|---|---|
-| Monitors per tenant | 30 | Plenty — not the bottleneck |
-| Monitor frequency | Fixed every 6 hours | 4 runs/day per monitor, non-negotiable |
-| **Monitored resources/day** | **800 across all monitors** | **THE bottleneck — 800 ÷ 4 = 200 instances max** |
-| Snapshot resources/month | 20,000 cumulative | Generous — snapshot freely |
-| Visible snapshot jobs | 12 | Clean up old snapshots periodically |
-| Snapshot retention | 7 days | — |
-| Resolved drift retention | 30 days | — |
-
-### The math that matters
-
-A typical tenant has 300-500 resource instances across all workloads. Monitoring everything uses 1200-2000 resources/day — **instant quota death**.
-
-**EasyTCM's solution: monitoring profiles in `ConvertTo-TCMBaseline`**
-
-| Profile | Types | Daily cost (typical) | Use case |
-|---|---|---|---|
-| `SecurityCritical` (default) | ~16 | ~80-120/day | CA policies, auth methods, mail security, federation |
-| `Recommended` | ~30 | ~200-400/day | Above + roles, compliance, device policies |
-| `Full` | ~52 | 400-2000+/day | ⚠️ Will likely exceed quota |
-
-```powershell
-# Default — quota-safe, covers 80% of attack surface
-$baseline = $snapshot | ConvertTo-TCMBaseline
-
-# Broader coverage — check your quota first
-$baseline = $snapshot | ConvertTo-TCMBaseline -Profile Recommended
-
-# Everything — only if you have very few resource instances
-$baseline = $snapshot | ConvertTo-TCMBaseline -Profile Full
-```
-
-`Get-TCMQuota` tracks all limits in real-time. `New-TCMMonitor` warns before creating a monitor that would exceed quota.
-
----
-
-## 🏗️ Project Roadmap
-
-### ✅ Phase 1 — Foundation (v0.1.0) — SHIPPED
-- [x] PowerShell module scaffold (14 cmdlets)
-- [x] `Initialize-TCM` — one-command setup
-- [x] Snapshot cmdlets with workload shortcuts
-- [x] Monitor CRUD with quota-aware warnings
-- [x] `ConvertTo-TCMBaseline` — Snap → Baseline converter
-- [x] `Get-TCMDrift` with workload enrichment
-- [x] `Get-TCMQuota` — real-time quota dashboard
-- [x] `Sync-TCMDriftToMaester` — Maester bridge (north star)
-- [x] GitHub Actions CI + PSGallery publish workflow
-- [x] Pester unit tests
-
-### 🏗️ Phase 2 — Validate & Report (v0.2.0) — SHIPPED
-- [x] ✅ Validate all cmdlets against live TCM tenant (62 resource types across 5 workloads)
-- [x] ✅ Refine `ConvertTo-TCMBaseline` with real snapshot data + monitoring profiles
-- [x] ✅ `Export-TCMDriftReport` — HTML dashboard with quota bars, property diffs, admin portal deep links
-- [x] ✅ `Get-TCMMonitoringResult` — monitor cycle visibility (hidden `configurationMonitoringResults` endpoint)
-- [ ] Teams adaptive card notifications
-- [ ] CIS/CISA baseline templates
-- [x] ✅ Published to PSGallery
-
-### ✅ Phase 3 — Easy Buttons (v0.3.0) — SHIPPED
-- [x] `Start-TCMMonitoring` — guided setup wizard (zero to monitoring in one command)
-- [x] `Watch-TCMDrift` — daily drift check (console / HTML / Maester modes)
-- [x] `Update-TCMBaseline` — rebaseline after approved changes
-- [x] `Compare-TCMBaseline` — detect new/deleted resources + file-based cache
-- [x] Improved Maester test generation with `Add-MtTestResultDetail`
-- [x] GitHub Pages documentation site
-
-### 🔮 Phase 4 — Ecosystem (v0.4.0+)
-- [ ] Propose TCM data source to maester365/maester community
-- [ ] Remediation script generation (`Repair-TCMDrift`)
-- [ ] Multi-tenant comparison (`Compare-TCMTenant`)
-- [ ] CIS/CISA baseline templates
-- [ ] Teams adaptive card notifications
-- [ ] Multi-cloud support (GCC, China, Germany)
-- [ ] EntraExporter integration
+6 workloads, 62 resource types: **Entra** (CA policies, auth methods, named locations) · **Exchange** (transport rules, anti-phishing, DKIM) · **Intune** (device config) · **Teams** (meeting/messaging policies, federation) · **Security & Compliance** (DLP, retention, sensitivity labels)
 
 ---
 
 ## 🤝 Contributing
 
-Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
-
 ```powershell
-# Clone and load for development
 git clone https://github.com/kayasax/EasyTCM.git
-cd EasyTCM
-Import-Module ./EasyTCM/EasyTCM.psd1
-Invoke-Pester ./tests/
+cd EasyTCM; Import-Module ./EasyTCM/EasyTCM.psd1; Invoke-Pester ./tests/
 ```
 
----
-
-## 📚 Resources
-
-- [TCM Concept Overview](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) — Microsoft's official TCM documentation
-- [TCM API Reference (beta)](https://learn.microsoft.com/en-us/graph/api/resources/unified-tenant-configuration-management-api-overview?view=graph-rest-beta) — Graph API reference
-- [TCM Authentication Setup](https://learn.microsoft.com/en-us/graph/utcm-authentication-setup) — Service principal and permission configuration
-- [TCM Schema Store](https://json.schemastore.org/utcm-monitor.json) — Complete resource type schemas
-- [EasyPIM](https://github.com/kayasax/EasyPIM) — Sister project for PIM management
-- [Maester](https://maester.dev/) — Microsoft 365 security test automation framework
-
----
-
-## 📄 License
-
-This project is licensed under the MIT License — see the [LICENSE](LICENSE) file for details.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ---
 

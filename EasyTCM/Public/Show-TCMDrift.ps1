@@ -48,6 +48,24 @@ function Show-TCMDrift {
     )
 
     # ── Resolve mode ────────────────────────────────────────────────
+
+    # Fetch active drifts once (reused by all modes)
+    $driftParams = @{ Status = 'active' }
+    if ($MonitorId) { $driftParams.MonitorId = $MonitorId }
+    $activeDrifts = @(Get-TCMDrift @driftParams)
+
+    # In -Report/-Maester modes, show a brief console summary so the user isn't blind
+    if (($Report -or $Maester) -and $activeDrifts.Count -gt 0) {
+        Write-Host ''
+        Write-Host "  ⚠️  $($activeDrifts.Count) active drift(s) detected" -ForegroundColor Yellow
+        $grouped = $activeDrifts | Group-Object -Property ResourceType
+        foreach ($group in $grouped) {
+            $shortType = ($group.Name -split '\.')[-1]
+            Write-Host "    • $shortType ($($group.Count))" -ForegroundColor Yellow
+        }
+        Write-Host ''
+    }
+
     if ($Report) {
         # HTML report mode
         $reportParams = @{}
@@ -83,9 +101,7 @@ function Show-TCMDrift {
     Write-Host '🔍 Checking for configuration drift...' -ForegroundColor Cyan
     Write-Host ''
 
-    $driftParams = @{ Status = 'active' }
-    if ($MonitorId) { $driftParams.MonitorId = $MonitorId }
-    $drifts = @(Get-TCMDrift @driftParams)
+    $drifts = $activeDrifts
 
     $monitors = if ($MonitorId) {
         @(Get-TCMMonitor -Id $MonitorId)

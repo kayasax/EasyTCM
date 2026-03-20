@@ -10,7 +10,7 @@ function Start-TCMMonitoring {
         4. Converts the snapshot to a baseline
         5. Creates a monitor that checks for drift every 6 hours
 
-        After this, TCM monitors your tenant automatically. Use Watch-TCMDrift
+        After this, TCM monitors your tenant automatically. Use Show-TCMDrift
         to check the results.
     .PARAMETER Profile
         Which monitoring profile to use:
@@ -98,8 +98,8 @@ function Start-TCMMonitoring {
         Write-Host '  Your tenant is already being monitored!' -ForegroundColor Green
         Write-Host ''
         Write-Host '  Next steps:' -ForegroundColor White
-        Write-Host '    Watch-TCMDrift                  # check for drift' -ForegroundColor DarkGray
-        Write-Host '    Watch-TCMDrift -Report           # HTML report' -ForegroundColor DarkGray
+        Write-Host '    Show-TCMDrift                  # check for drift' -ForegroundColor DarkGray
+        Write-Host '    Show-TCMDrift -Report           # HTML report' -ForegroundColor DarkGray
         Write-Host '    Update-TCMBaseline               # after approved changes' -ForegroundColor DarkGray
         return $existingMatch
     }
@@ -139,12 +139,12 @@ function Start-TCMMonitoring {
     Write-Host '  What happens next:' -ForegroundColor White
     Write-Host '  • TCM compares your tenant against this baseline every 6 hours' -ForegroundColor DarkGray
     Write-Host '  • Any unauthorized changes are flagged as "drift"' -ForegroundColor DarkGray
-    Write-Host '  • Run Watch-TCMDrift anytime to see the current state' -ForegroundColor DarkGray
+    Write-Host '  • Run Show-TCMDrift anytime to see the current state' -ForegroundColor DarkGray
     Write-Host ''
     Write-Host '  Quick commands:' -ForegroundColor White
-    Write-Host '    Watch-TCMDrift                  # console summary' -ForegroundColor DarkGray
-    Write-Host '    Watch-TCMDrift -Report           # HTML report' -ForegroundColor DarkGray
-    Write-Host '    Watch-TCMDrift -Maester           # Maester integration' -ForegroundColor DarkGray
+    Write-Host '    Show-TCMDrift                  # console summary' -ForegroundColor DarkGray
+    Write-Host '    Show-TCMDrift -Report           # HTML report' -ForegroundColor DarkGray
+    Write-Host '    Show-TCMDrift -Maester           # Maester integration' -ForegroundColor DarkGray
     Write-Host '    Update-TCMBaseline               # after approved changes' -ForegroundColor DarkGray
     Write-Host '    Compare-TCMBaseline              # find untracked resources' -ForegroundColor DarkGray
     Write-Host ''

@@ -21,7 +21,7 @@ EasyTCM provides three "easy button" cmdlets that cover the entire monitoring li
            │
            ▼
 ┌──────────────────────┐
-│    Watch-TCMDrift    │  ← Daily check (30 seconds)
+│    Show-TCMDrift    │  ← Daily check (30 seconds)
 │  Console / Report /  │
 │  Maester             │
 └──────────┬───────────┘
@@ -111,7 +111,7 @@ Start-TCMMonitoring -SkipInitialize
 ### Quick Console Check (30 seconds)
 
 ```powershell
-Watch-TCMDrift
+Show-TCMDrift
 ```
 
 Shows a color-coded summary: green (no drift) or yellow (drift detected) with resource details.
@@ -119,7 +119,7 @@ Shows a color-coded summary: green (no drift) or yellow (drift detected) with re
 ### HTML Report (for auditors, managers, compliance)
 
 ```powershell
-Watch-TCMDrift -Report
+Show-TCMDrift -Report
 ```
 
 Generates an HTML dashboard with:
@@ -131,7 +131,7 @@ Generates an HTML dashboard with:
 ### Maester Integration (for security teams)
 
 ```powershell
-Watch-TCMDrift -Maester
+Show-TCMDrift -Maester
 ```
 
 Syncs drift data to Maester test format and runs `Invoke-Maester`. Results appear in Maester's HTML report alongside the 400+ built-in security checks.
@@ -141,7 +141,7 @@ Syncs drift data to Maester test format and runs `Invoke-Maester`. Results appea
 TCM only monitors resources in the baseline. New CA policies or deleted transport rules won't appear as drift. Add `-CompareBaseline` to catch them:
 
 ```powershell
-Watch-TCMDrift -CompareBaseline
+Show-TCMDrift -CompareBaseline
 ```
 
 Results are cached for 1 hour (uses a snapshot, which counts against quota).
@@ -162,13 +162,13 @@ When drift is detected, ask yourself:
 
 ```powershell
 # Pipeline: get full drift objects
-$drifts = Watch-TCMDrift -PassThru
+$drifts = Show-TCMDrift -PassThru
 
 # Filter to security-critical types
 $drifts | Where-Object { $_.ResourceType -match 'conditionalaccesspolicy|authenticationmethod' }
 
 # Full HTML report for documentation
-Watch-TCMDrift -Report
+Show-TCMDrift -Report
 ```
 
 ---
@@ -208,7 +208,7 @@ Updating monitor baseline...
    28 resources now monitored with 'Recommended' profile.
    All previous drift records have been cleared.
 
-   Next: Watch-TCMDrift to verify clean state.
+   Next: Show-TCMDrift to verify clean state.
 ```
 
 ### When to Rebaseline
@@ -216,12 +216,12 @@ Updating monitor baseline...
 ✅ **Do rebaseline when:**
 - You deployed approved policy changes
 - Onboarded a new service that adds resources
-- Watch-TCMDrift confirms only expected drift
+- Show-TCMDrift confirms only expected drift
 - Post-migration configuration stabilization
 
 ❌ **Do NOT rebaseline when:**
 - You see unexpected drift — investigate first!
-- Before reviewing current drift with Watch-TCMDrift
+- Before reviewing current drift with Show-TCMDrift
 - As a way to "make drift go away" without understanding it
 
 ---
@@ -254,10 +254,10 @@ Import-Module EasyTCM
 
 # Generate time-stamped HTML report
 $reportPath = "C:\Reports\EasyTCM-$(Get-Date -Format 'yyyy-MM-dd').html"
-Watch-TCMDrift -Report
+Show-TCMDrift -Report
 
 # Fail loudly if drift is found
-$drifts = Watch-TCMDrift -PassThru
+$drifts = Show-TCMDrift -PassThru
 if ($drifts.Count -gt 0) {
     # Write to Windows Event Log for SIEM pickup
     Write-EventLog -LogName Application -Source 'EasyTCM' `
@@ -301,7 +301,7 @@ Fully managed, cloud-hosted — no infrastructure to maintain.
 Connect-MgGraph -Identity -NoWelcome
 Import-Module EasyTCM
 
-$drifts = Watch-TCMDrift -PassThru
+$drifts = Show-TCMDrift -PassThru
 
 if ($drifts.Count -gt 0) {
     Write-Output "⚠️ $($drifts.Count) active drift(s) detected!"
@@ -358,7 +358,7 @@ jobs:
                           -NoWelcome
 
           Import-Module EasyTCM
-          $drifts = Watch-TCMDrift -PassThru
+          $drifts = Show-TCMDrift -PassThru
 
           if ($drifts.Count -gt 0) {
             foreach ($d in $drifts) {
@@ -373,7 +373,7 @@ jobs:
         shell: pwsh
         run: |
           Import-Module EasyTCM
-          Watch-TCMDrift -Report
+          Show-TCMDrift -Report
 
       - uses: actions/upload-artifact@v4
         if: failure()
@@ -419,10 +419,10 @@ No separate automation needed — drift checks ride along with your existing Mae
 | Command | Purpose | When |
 |---------|---------|------|
 | `Start-TCMMonitoring` | Guided setup wizard | First time only |
-| `Watch-TCMDrift` | Console drift summary | Daily |
-| `Watch-TCMDrift -Report` | HTML dashboard | For auditors/reports |
-| `Watch-TCMDrift -Maester` | Maester test results | Security workflows |
-| `Watch-TCMDrift -CompareBaseline` | Find untracked resources | Weekly |
+| `Show-TCMDrift` | Console drift summary | Daily |
+| `Show-TCMDrift -Report` | HTML dashboard | For auditors/reports |
+| `Show-TCMDrift -Maester` | Maester test results | Security workflows |
+| `Show-TCMDrift -CompareBaseline` | Find untracked resources | Weekly |
 | `Update-TCMBaseline` | Accept approved changes | After confirmed drift |
 | `Get-TCMQuota` | Check API quota usage | When needed |
 | `Compare-TCMBaseline -Detailed` | Deep resource comparison | Investigation |

@@ -26,7 +26,7 @@ Install-Module EasyTCM
 Start-TCMMonitoring
 
 # 2. Check for drift (daily)
-Watch-TCMDrift
+Show-TCMDrift
 
 # 3. After approved changes, accept the new state
 Update-TCMBaseline
@@ -36,12 +36,12 @@ Update-TCMBaseline
 
 **`Start-TCMMonitoring`** — Guided wizard: connects to Graph, creates the TCM service principal, snapshots your tenant, builds a security-focused baseline, creates a monitor. Zero to monitoring in one run.
 
-**`Watch-TCMDrift`** — Your daily command:
+**`Show-TCMDrift`** — Your daily command:
 ```powershell
-Watch-TCMDrift                    # quick console summary
-Watch-TCMDrift -Report            # HTML dashboard with admin portal links
-Watch-TCMDrift -Maester           # pipe results into Maester test framework
-Watch-TCMDrift -CompareBaseline   # also catch new/deleted resources
+Show-TCMDrift                    # quick console summary
+Show-TCMDrift -Report            # HTML dashboard with admin portal links
+Show-TCMDrift -Maester           # pipe results into Maester test framework
+Show-TCMDrift -CompareBaseline   # also catch new/deleted resources
 ```
 
 **`Update-TCMBaseline`** — After you verify drift is from approved changes, rebaseline with one command. Shows current drift for review, takes fresh snapshot, updates the monitor.
@@ -114,7 +114,7 @@ Install-Module EasyTCM -Scope CurrentUser
 | Cmdlet | Description |
 |---|---|
 | `Start-TCMMonitoring` | Guided wizard: connect → setup → snapshot → baseline → monitor |
-| `Watch-TCMDrift` | Daily drift check: console, `-Report` HTML, `-Maester` tests |
+| `Show-TCMDrift` | Daily drift check: console, `-Report` HTML, `-Maester` tests |
 | `Update-TCMBaseline` | Rebaseline after approved changes |
 
 ### Setup

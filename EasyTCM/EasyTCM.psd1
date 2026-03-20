@@ -58,7 +58,7 @@
         'Sync-TCMDriftToMaester'
         # Easy Buttons
         'Start-TCMMonitoring'
-        'Watch-TCMDrift'
+        'Show-TCMDrift'
         'Update-TCMBaseline'
     )
 
@@ -77,7 +77,7 @@
             Tags         = @('TCM', 'TenantConfiguration', 'Microsoft365', 'Maester', 'Drift', 'ConfigurationManagement', 'MicrosoftGraph')
             LicenseUri   = 'https://github.com/kayasax/EasyTCM/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/kayasax/EasyTCM'
-            ReleaseNotes = 'v0.3.0: Easy-button cmdlets — Start-TCMMonitoring (guided setup wizard), Watch-TCMDrift (daily drift check with console/HTML/Maester modes), Update-TCMBaseline (rebaseline after approved changes). File-based comparison cache, improved Maester test generation with Add-MtTestResultDetail.'
+            ReleaseNotes = 'v0.3.0: Easy-button cmdlets — Start-TCMMonitoring (guided setup wizard), Show-TCMDrift (daily drift check with console/HTML/Maester modes), Update-TCMBaseline (rebaseline after approved changes). File-based comparison cache, improved Maester test generation with Add-MtTestResultDetail.'
         }
     }
 }

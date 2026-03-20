@@ -1,4 +1,4 @@
-function Watch-TCMDrift {
+function Show-TCMDrift {
     <#
     .SYNOPSIS
         Single command to check your tenant for drift — console, HTML report, or Maester.
@@ -24,19 +24,19 @@ function Watch-TCMDrift {
         Return the drift objects for pipeline processing.
     .EXAMPLE
         # Quick console check
-        Watch-TCMDrift
+        Show-TCMDrift
 
     .EXAMPLE
         # Full HTML report
-        Watch-TCMDrift -Report
+        Show-TCMDrift -Report
 
     .EXAMPLE
         # Maester integration with baseline comparison
-        Watch-TCMDrift -Maester -CompareBaseline
+        Show-TCMDrift -Maester -CompareBaseline
 
     .EXAMPLE
         # Pipeline: get drifted resource details
-        Watch-TCMDrift -PassThru | Where-Object { $_.DriftedPropertyCount -gt 0 }
+        Show-TCMDrift -PassThru | Where-Object { $_.DriftedPropertyCount -gt 0 }
     #>
     [CmdletBinding()]
     param(
@@ -141,9 +141,9 @@ function Watch-TCMDrift {
     # Hints
     if (-not $Report -and -not $Maester) {
         Write-Host '  Commands:' -ForegroundColor DarkGray
-        Write-Host '    Watch-TCMDrift -Report           # detailed HTML report' -ForegroundColor DarkGray
-        Write-Host '    Watch-TCMDrift -Maester           # Maester test results' -ForegroundColor DarkGray
-        Write-Host '    Watch-TCMDrift -CompareBaseline   # find untracked resources' -ForegroundColor DarkGray
+        Write-Host '    Show-TCMDrift -Report           # detailed HTML report' -ForegroundColor DarkGray
+        Write-Host '    Show-TCMDrift -Maester           # Maester test results' -ForegroundColor DarkGray
+        Write-Host '    Show-TCMDrift -CompareBaseline   # find untracked resources' -ForegroundColor DarkGray
         if ($drifts.Count -gt 0) {
             Write-Host '    Update-TCMBaseline               # accept current state as new baseline' -ForegroundColor DarkGray
         }

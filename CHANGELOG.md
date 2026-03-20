@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - **`Start-TCMMonitoring`** — Guided setup wizard: from zero to monitoring in a single command. Handles Graph connection, service principal setup, snapshot, baseline conversion, and monitor creation with a 5-step interactive flow.
-- **`Watch-TCMDrift`** — Daily drift check with three modes: console summary (default), HTML report (`-Report`), or Maester test results (`-Maester`). Includes `-CompareBaseline` to detect new/deleted resources and `-PassThru` for pipeline integration.
+- **`Show-TCMDrift`** — Daily drift check with three modes: console summary (default), HTML report (`-Report`), or Maester test results (`-Maester`). Includes `-CompareBaseline` to detect new/deleted resources and `-PassThru` for pipeline integration.
 - **`Update-TCMBaseline`** — Rebaseline after approved changes: takes a fresh snapshot, converts to baseline with the same profile, updates the monitor, and clears all previous drift records. Shows current drift for review before proceeding.
 - **`Compare-TCMBaseline`** — file-based cache (`%TEMP%\EasyTCM-CompareBaselineCache.json`) that survives `Import-Module -Force` and session restarts (1-hour TTL)
 - **Maester test generation** — `Sync-TCMDriftToMaester` now generates `TCM-Drift.Tests.ps1` per drift suite with `Add-MtTestResultDetail` for proper Maester report formatting (markdown tables with property diffs)

@@ -64,7 +64,7 @@ Your tenant has a CA policy "Require MFA for Admins" — it's enabled and Maeste
                    │ drift data
                    ▼
 ┌─────────────────────────────────────────────────────┐
-│     Watch-TCMDrift -Maester  (or Sync-TCMDrift...)  │
+│     Show-TCMDrift -Maester  (or Sync-TCMDrift...)  │
 │                                                      │
 │  1. Fetches drift from TCM API                       │
 │  2. Generates per-monitor test suites:               │
@@ -142,7 +142,7 @@ $env:MAESTER_TESTS_PATH = 'D:\maester-tests'
 
 ```powershell
 # One command: sync TCM drift → generate tests → run Maester
-Watch-TCMDrift -Maester
+Show-TCMDrift -Maester
 ```
 
 That's it. The Maester HTML report opens with your drift results alongside all standard security tests.
@@ -173,7 +173,7 @@ TCM drift detection only catches **property changes** on resources in the baseli
 Add `-CompareBaseline` to catch these:
 
 ```powershell
-Watch-TCMDrift -Maester -CompareBaseline
+Show-TCMDrift -Maester -CompareBaseline
 ```
 
 This takes a fresh snapshot (cached for 1 hour to save quota) and includes new/deleted resources in the Maester report as additional test results.

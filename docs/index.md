@@ -67,7 +67,7 @@ That's it. `Start-TCMMonitoring` is a guided wizard that handles everything:
 ### One Command to Check
 
 ```powershell
-Watch-TCMDrift
+Show-TCMDrift
 ```
 
 ```
@@ -120,9 +120,9 @@ Update-TCMBaseline
 ┌──────────────────▼──────────────────────────────┐
 │              Your Workflow                        │
 │                                                  │
-│  Watch-TCMDrift           → Console summary      │
-│  Watch-TCMDrift -Report   → HTML dashboard       │
-│  Watch-TCMDrift -Maester  → Maester test suite   │
+│  Show-TCMDrift           → Console summary      │
+│  Show-TCMDrift -Report   → HTML dashboard       │
+│  Show-TCMDrift -Maester  → Maester test suite   │
 │  Update-TCMBaseline       → Accept new state     │
 └─────────────────────────────────────────────────┘
 ```

@@ -17,12 +17,12 @@ function Update-TCMBaseline {
 
         When to run this:
         • After deploying approved policy changes
-        • After Watch-TCMDrift confirms only expected drift
+        • After Show-TCMDrift confirms only expected drift
         • After onboarding new services that add resources
 
         When NOT to run this:
         • If you see unexpected drift — investigate first!
-        • Before reviewing current drift with Watch-TCMDrift
+        • Before reviewing current drift with Show-TCMDrift
     .PARAMETER MonitorId
         The monitor to update. If omitted, updates the first active monitor.
     .PARAMETER Profile
@@ -32,7 +32,7 @@ function Update-TCMBaseline {
         Skip the confirmation prompt.
     .EXAMPLE
         # Review drift, then rebaseline
-        Watch-TCMDrift
+        Show-TCMDrift
         Update-TCMBaseline
 
     .EXAMPLE
@@ -139,6 +139,6 @@ function Update-TCMBaseline {
     Write-Host "   $($baseline.Resources.Count) resources now monitored with '$Profile' profile." -ForegroundColor White
     Write-Host '   All previous drift records have been cleared.' -ForegroundColor DarkGray
     Write-Host ''
-    Write-Host '   Next: Watch-TCMDrift to verify clean state.' -ForegroundColor DarkGray
+    Write-Host '   Next: Show-TCMDrift to verify clean state.' -ForegroundColor DarkGray
     Write-Host ''
 }

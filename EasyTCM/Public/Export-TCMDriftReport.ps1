@@ -284,7 +284,7 @@ function Export-TCMDriftReport {
 <div class="container">
   <header>
     <h1>&#128737; <span>EasyTCM</span> Drift Report</h1>
-    <div class="subtitle">Generated $(Get-Date -Format 'dddd, MMMM d, yyyy \a\t HH:mm:ss') UTC</div>
+    <div class="subtitle">Generated $([DateTime]::UtcNow.ToString('dddd, MMMM d, yyyy \a\t HH:mm:ss')) UTC</div>
   </header>
 
   <div class="status-banner">$statusIcon $statusText</div>

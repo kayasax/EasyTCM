@@ -7,7 +7,7 @@
     RootModule        = 'EasyTCM.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.3.0'
+    ModuleVersion     = '0.3.1'
 
     # ID used to uniquely identify this module
     GUID              = 'a3f7c8d2-5e1b-4a9f-b0c6-d8e2f1a4b5c7'
@@ -77,7 +77,7 @@
             Tags         = @('TCM', 'TenantConfiguration', 'Microsoft365', 'Maester', 'Drift', 'ConfigurationManagement', 'MicrosoftGraph')
             LicenseUri   = 'https://github.com/kayasax/EasyTCM/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/kayasax/EasyTCM'
-            ReleaseNotes = 'v0.3.0: Easy-button cmdlets — Start-TCMMonitoring (guided setup wizard), Show-TCMDrift (daily drift check with console/HTML/Maester modes), Update-TCMBaseline (rebaseline after approved changes). File-based comparison cache, improved Maester test generation with Add-MtTestResultDetail.'
+            ReleaseNotes = 'v0.3.1: Renamed Watch-TCMDrift to Show-TCMDrift (approved PowerShell verb). Show-TCMDrift -Report/-Maester now shows brief drift summary in console. Fixed HTML report timestamp (was local time labeled as UTC).'
         }
     }
 }

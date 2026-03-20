@@ -5,6 +5,15 @@ All notable changes to EasyTCM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.1] - 2026-03-20
+
+### Changed
+- **Renamed `Watch-TCMDrift` to `Show-TCMDrift`** — uses an approved PowerShell verb, eliminates import warning
+
+### Fixed
+- `Show-TCMDrift -Report` and `-Maester` modes now show a brief drift summary in the console before generating output, so users aren't blind to active drifts
+- HTML report timestamp was using local time but labeled as UTC — now uses actual UTC
+
 ## [0.3.0] - 2026-03-19
 
 ### Added

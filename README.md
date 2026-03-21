@@ -15,7 +15,9 @@
 
 Someone changes a Conditional Access policy. A transport rule gets modified. An auth method is disabled. **You don't know until something breaks — or fails an audit.**
 
-Microsoft's new [TCM APIs](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) monitor your tenant configuration server-side every 6 hours across Entra, Exchange, Intune, Teams, and Security & Compliance. EasyTCM makes them accessible through 3 simple commands.
+Microsoft's new [TCM APIs](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) monitor your tenant configuration server-side every 6 hours across Entra, Exchange, Intune, Teams, and Security & Compliance.  
+
+**EasyTCM** makes them accessible through 3 simple commands.
 
 ## 🚀 Three Commands. That's It.
 

@@ -1,11 +1,20 @@
-# CISA SCuBA Baseline Templates
+# Baseline Templates
 
-Pre-built templates that map **CISA Secure Cloud Business Applications (SCuBA)** controls to TCM resource types. Use these to scope your monitors to security-relevant configurations — when a CISA-relevant setting changes, TCM detects it within 6 hours.
+Pre-built templates that scope your TCM monitor to the resource types that matter for your use case. When a monitored config changes, TCM detects it within 6 hours.
 
 > **EasyTCM watches the config. Maester/ScubaGear checks the rules.**
-> Templates don't replace CISA compliance assessments — they ensure your TCM monitor covers the right resource types so drift on CISA-relevant settings triggers an alert.
+> Templates define *what to monitor*, not *how to evaluate*. Pair with Maester for compliance testing.
 
 ## Available Templates
+
+### EasyTCM Profiles — Security-prioritized monitoring
+
+| Template | Focus | Resource Types | Controls | Quota Impact |
+|---|---|---|---|---|
+| `easytcm-security-critical.json` | Identity + mail security + federation | 14 | 12 | Low |
+| `easytcm-recommended.json` | SecurityCritical + org config, Teams, Intune, DLP, retention | 29 | 23 | Medium |
+
+### CISA SCuBA — Compliance-aligned monitoring
 
 | Template | Standard | Resource Types | Controls | BOD 25-01 |
 |---|---|---|---|---|
@@ -16,17 +25,73 @@ Pre-built templates that map **CISA Secure Cloud Business Applications (SCuBA)**
 ## Quick Start
 
 ```powershell
-# Create a CISA-scoped monitor in one pipeline
-New-TCMSnapshot -Wait `
-  | ConvertTo-TCMBaseline -Template CISA-SCuBA-Entra -DisplayName 'CISA Entra' `
-  | New-TCMMonitor -DisplayName 'CISA SCuBA Entra'
+# SecurityCritical monitor — default, low quota
+New-TCMSnapshot -Wait | ConvertTo-TCMBaseline -Template EasyTCM-SecurityCritical | New-TCMMonitor
 
-# Combine all three workloads
-$snap = New-TCMSnapshot -Workload Entra, Exchange, Teams -Wait
-ConvertTo-TCMBaseline -SnapshotContent $snap `
-  -Template CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams `
-  -DisplayName 'CISA SCuBA Full' | New-TCMMonitor
+# Recommended monitor — broader coverage
+New-TCMSnapshot -Workload Entra, Exchange, Teams -Wait `
+  | ConvertTo-TCMBaseline -Template EasyTCM-Recommended `
+  | New-TCMMonitor -DisplayName 'Recommended'
+
+# CISA SCuBA scoped monitor
+ConvertTo-TCMBaseline -Template CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams `
+  -SnapshotContent $snap | New-TCMMonitor -DisplayName 'CISA SCuBA'
 ```
+
+---
+
+## EasyTCM-SecurityCritical — 12 controls across 14 resource types
+
+**Default profile.** High-priority resource types that create immediate security exposure if changed. Covers 80% of the attack surface: identity, mail security, and federation.
+
+<details>
+<summary>Controls and resource types</summary>
+
+| Control | What TCM Monitors | Severity | Resource Types |
+|---|---|---|---|
+| SC.ENTRA.CA | Conditional Access policies | SHALL | conditionalaccesspolicy |
+| SC.ENTRA.AUTHMETHOD | Authentication method policies | SHALL | authenticationmethodpolicy |
+| SC.ENTRA.AUTHZ | Authorization policies | SHALL | authorizationpolicy |
+| SC.ENTRA.XTENANT | Cross-tenant access policies | SHALL | crosstenantaccesspolicy, crosstenantaccesspolicyconfigurationpartner |
+| SC.ENTRA.NAMEDLOC | Named location policies | SHALL | namedlocationpolicy |
+| SC.EXO.ANTIPHISH | Anti-phishing policies and rules | SHALL | antiphishpolicy, antiphishrule |
+| SC.EXO.TRANSPORT | Transport rules (mail flow) | SHALL | transportrule |
+| SC.EXO.DKIM | DKIM signing configuration | SHALL | dkimsigningconfig |
+| SC.EXO.SPAM | Content filter (anti-spam) | SHALL | hostedcontentfilterpolicy |
+| SC.EXO.SAFELINKS | Safe Links policies | SHALL | safelinkspolicy |
+| SC.EXO.SAFEATTACH | Safe Attachments policies | SHALL | safeattachmentpolicy |
+| SC.TEAMS.FEDERATION | Teams federation configuration | SHALL | federationconfiguration |
+
+</details>
+
+## EasyTCM-Recommended — 23 controls across 29 resource types
+
+**Balanced coverage.** Everything in SecurityCritical plus org config, mail connectors, Teams policies, Intune account protection, and Security & Compliance data protection.
+
+> **Quota note:** May approach the 200 instances/run limit in tenants with many CA policies, transport rules, or Teams policies. Run `Get-TCMQuota` after creating the monitor.
+
+<details>
+<summary>Additional controls beyond SecurityCritical</summary>
+
+| Control | What TCM Monitors | Severity | Resource Types |
+|---|---|---|---|
+| REC.EXO.ORGCONFIG | Exchange organization configuration | SHOULD | organizationconfig |
+| REC.EXO.CONNECTORS | Mail connectors (inbound/outbound) | SHOULD | inboundconnector, outboundconnector |
+| REC.EXO.OUTBOUNDSPAM | Outbound spam filter policy | SHOULD | hostedoutboundspamfilterpolicy |
+| REC.EXO.MALWARE | Malware filter rules | SHOULD | malwarefilterrule |
+| REC.TEAMS.MEETINGS | Meeting policies and configuration | SHOULD | meetingpolicy, meetingconfiguration |
+| REC.TEAMS.MESSAGING | Messaging policies | SHOULD | messagingpolicy |
+| REC.TEAMS.APPS | App permission policies | SHOULD | apppermissionpolicy |
+| REC.INTUNE.ACCTPROT | Local admin group membership | SHOULD | accountprotectionlocalusergroupmembershippolicy |
+| REC.SC.DLP | DLP compliance policies | SHOULD | dlpcompliancepolicy |
+| REC.SC.RETENTION | Retention policies and rules | SHOULD | retentioncompliancepolicy, retentioncompliancerule |
+| REC.SC.LABELS | Sensitivity label policies and tags | SHOULD | labelpolicy, compliancetag |
+
+*Plus all 12 SecurityCritical controls (not repeated here).*
+
+</details>
+
+---
 
 ## CISA-SCuBA-Entra — 18 controls across 6 resource types
 

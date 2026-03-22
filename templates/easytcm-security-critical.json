@@ -1,0 +1,112 @@
+{
+  "metadata": {
+    "standard": "EasyTCM",
+    "version": "0.3.1",
+    "category": "SecurityCritical",
+    "displayName": "EasyTCM SecurityCritical",
+    "description": "High-priority resource types that, if changed, create immediate security exposure. Covers identity (CA policies, auth methods, cross-tenant access), mail security (anti-phishing, transport rules, DKIM, safe links/attachments), and federation. This is the default profile used by ConvertTo-TCMBaseline and Start-TCMMonitoring.",
+    "quotaNote": "~14 resource types. Fits comfortably within the 200 instances/run quota for most tenants."
+  },
+  "resourceTypes": [
+    "microsoft.entra.conditionalaccesspolicy",
+    "microsoft.entra.authenticationmethodpolicy",
+    "microsoft.entra.authorizationpolicy",
+    "microsoft.entra.crosstenantaccesspolicy",
+    "microsoft.entra.crosstenantaccesspolicyconfigurationpartner",
+    "microsoft.entra.namedlocationpolicy",
+    "microsoft.exchange.antiphishpolicy",
+    "microsoft.exchange.antiphishrule",
+    "microsoft.exchange.transportrule",
+    "microsoft.exchange.dkimsigningconfig",
+    "microsoft.exchange.hostedcontentfilterpolicy",
+    "microsoft.exchange.safeattachmentpolicy",
+    "microsoft.exchange.safelinkspolicy",
+    "microsoft.teams.federationconfiguration"
+  ],
+  "controls": [
+    {
+      "id": "SC.ENTRA.CA",
+      "title": "Conditional Access policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.conditionalaccesspolicy"],
+      "guidance": "CA policies control who can access what and how. Any change to state, grant controls, conditions, or exclusions can open a security gap. TCM monitors all CA policy properties."
+    },
+    {
+      "id": "SC.ENTRA.AUTHMETHOD",
+      "title": "Authentication method policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.authenticationmethodpolicy"],
+      "guidance": "Controls which MFA methods are enabled, migration state, and per-method configuration. Drift here can weaken MFA posture (e.g., re-enabling SMS)."
+    },
+    {
+      "id": "SC.ENTRA.AUTHZ",
+      "title": "Authorization policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.authorizationpolicy"],
+      "guidance": "Governs app registration permissions, consent framework, guest access, and admin consent workflow. Changes can allow unauthorized app consent or overly permissive guest access."
+    },
+    {
+      "id": "SC.ENTRA.XTENANT",
+      "title": "Cross-tenant access policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.crosstenantaccesspolicy", "microsoft.entra.crosstenantaccesspolicyconfigurationpartner"],
+      "guidance": "Controls B2B collaboration and direct connect trust with external organizations. Changes to inbound/outbound settings or trusted partners can expose resources to unauthorized tenants."
+    },
+    {
+      "id": "SC.ENTRA.NAMEDLOC",
+      "title": "Named location policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.namedlocationpolicy"],
+      "guidance": "Named locations define trusted IP ranges and countries used in CA conditions. Adding an IP range or marking a location as trusted can bypass CA policies."
+    },
+    {
+      "id": "SC.EXO.ANTIPHISH",
+      "title": "Anti-phishing policies and rules",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.antiphishpolicy", "microsoft.exchange.antiphishrule"],
+      "guidance": "Controls impersonation protection, mailbox intelligence, spoofing filters. Weakening these policies or changing rule scope exposes users to phishing attacks."
+    },
+    {
+      "id": "SC.EXO.TRANSPORT",
+      "title": "Transport rules (mail flow)",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.transportrule"],
+      "guidance": "Transport rules can redirect, copy, or modify mail in transit. Unauthorized changes can disable external sender warnings, create hidden forwarding, or strip security headers."
+    },
+    {
+      "id": "SC.EXO.DKIM",
+      "title": "DKIM signing configuration",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.dkimsigningconfig"],
+      "guidance": "DKIM signs outbound mail to prevent spoofing. Disabling DKIM or changing signing keys weakens email authentication."
+    },
+    {
+      "id": "SC.EXO.SPAM",
+      "title": "Content filter (anti-spam) policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.hostedcontentfilterpolicy"],
+      "guidance": "Controls spam filtering thresholds, allowed/blocked senders, and IP allow lists. Adding allowed domains or IPs can bypass spam protection entirely."
+    },
+    {
+      "id": "SC.EXO.SAFELINKS",
+      "title": "Safe Links policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.safelinkspolicy"],
+      "guidance": "Safe Links rewrites and scans URLs at click time. Disabling or changing scope leaves users vulnerable to malicious links in email and Teams."
+    },
+    {
+      "id": "SC.EXO.SAFEATTACH",
+      "title": "Safe Attachments policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.safeattachmentpolicy"],
+      "guidance": "Safe Attachments detonates email attachments in a sandbox. Disabling this or changing the action (e.g., from Block to Monitor) allows malicious payloads through."
+    },
+    {
+      "id": "SC.TEAMS.FEDERATION",
+      "title": "Teams federation configuration",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.teams.federationconfiguration"],
+      "guidance": "Controls which external domains can communicate with your users via Teams/Skype. Opening federation to all domains or allowing unmanaged users enables social engineering attacks."
+    }
+  ]
+}

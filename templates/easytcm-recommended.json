@@ -1,0 +1,204 @@
+{
+  "metadata": {
+    "standard": "EasyTCM",
+    "version": "0.3.1",
+    "category": "Recommended",
+    "displayName": "EasyTCM Recommended",
+    "description": "Balanced coverage: SecurityCritical types plus org config, connectors, Teams policies, Intune account protection, and Security & Compliance data protection (DLP, retention, labels). Good balance of security coverage vs. quota consumption.",
+    "quotaNote": "~29 resource types. May approach the 200 instances/run limit in tenants with many CA policies, transport rules, or Teams policies. Check Get-TCMQuota after creating the monitor."
+  },
+  "resourceTypes": [
+    "microsoft.entra.conditionalaccesspolicy",
+    "microsoft.entra.authenticationmethodpolicy",
+    "microsoft.entra.authorizationpolicy",
+    "microsoft.entra.crosstenantaccesspolicy",
+    "microsoft.entra.crosstenantaccesspolicyconfigurationpartner",
+    "microsoft.entra.namedlocationpolicy",
+    "microsoft.exchange.antiphishpolicy",
+    "microsoft.exchange.antiphishrule",
+    "microsoft.exchange.transportrule",
+    "microsoft.exchange.dkimsigningconfig",
+    "microsoft.exchange.hostedcontentfilterpolicy",
+    "microsoft.exchange.safeattachmentpolicy",
+    "microsoft.exchange.safelinkspolicy",
+    "microsoft.exchange.organizationconfig",
+    "microsoft.exchange.inboundconnector",
+    "microsoft.exchange.outboundconnector",
+    "microsoft.exchange.hostedoutboundspamfilterpolicy",
+    "microsoft.exchange.malwarefilterrule",
+    "microsoft.teams.federationconfiguration",
+    "microsoft.teams.meetingpolicy",
+    "microsoft.teams.messagingpolicy",
+    "microsoft.teams.apppermissionpolicy",
+    "microsoft.teams.meetingconfiguration",
+    "microsoft.intune.accountprotectionlocalusergroupmembershippolicy",
+    "microsoft.securityandcompliance.dlpcompliancepolicy",
+    "microsoft.securityandcompliance.retentioncompliancepolicy",
+    "microsoft.securityandcompliance.retentioncompliancerule",
+    "microsoft.securityandcompliance.labelpolicy",
+    "microsoft.securityandcompliance.compliancetag"
+  ],
+  "controls": [
+    {
+      "id": "REC.ENTRA.CA",
+      "title": "Conditional Access policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.conditionalaccesspolicy"],
+      "guidance": "CA policies control who can access what and how. Any change to state, grant controls, conditions, or exclusions can open a security gap."
+    },
+    {
+      "id": "REC.ENTRA.AUTHMETHOD",
+      "title": "Authentication method policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.authenticationmethodpolicy"],
+      "guidance": "Controls which MFA methods are enabled, migration state, and per-method configuration."
+    },
+    {
+      "id": "REC.ENTRA.AUTHZ",
+      "title": "Authorization policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.authorizationpolicy"],
+      "guidance": "Governs app registration, consent framework, guest access, and admin consent workflow."
+    },
+    {
+      "id": "REC.ENTRA.XTENANT",
+      "title": "Cross-tenant access policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.crosstenantaccesspolicy", "microsoft.entra.crosstenantaccesspolicyconfigurationpartner"],
+      "guidance": "Controls B2B collaboration trust with external organizations."
+    },
+    {
+      "id": "REC.ENTRA.NAMEDLOC",
+      "title": "Named location policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.entra.namedlocationpolicy"],
+      "guidance": "Defines trusted IP ranges and countries used in CA conditions."
+    },
+    {
+      "id": "REC.EXO.ANTIPHISH",
+      "title": "Anti-phishing policies and rules",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.antiphishpolicy", "microsoft.exchange.antiphishrule"],
+      "guidance": "Impersonation protection, mailbox intelligence, and spoofing filters."
+    },
+    {
+      "id": "REC.EXO.TRANSPORT",
+      "title": "Transport rules (mail flow)",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.transportrule"],
+      "guidance": "Mail flow rules that redirect, copy, or modify mail. Unauthorized changes can create hidden forwarding."
+    },
+    {
+      "id": "REC.EXO.DKIM",
+      "title": "DKIM signing configuration",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.dkimsigningconfig"],
+      "guidance": "DKIM signs outbound mail to prevent spoofing."
+    },
+    {
+      "id": "REC.EXO.SPAM",
+      "title": "Content filter (anti-spam) policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.hostedcontentfilterpolicy"],
+      "guidance": "Spam filtering thresholds, allowed/blocked senders, and IP allow lists."
+    },
+    {
+      "id": "REC.EXO.SAFELINKS",
+      "title": "Safe Links policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.safelinkspolicy"],
+      "guidance": "URL rewriting and click-time scanning."
+    },
+    {
+      "id": "REC.EXO.SAFEATTACH",
+      "title": "Safe Attachments policies",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.exchange.safeattachmentpolicy"],
+      "guidance": "Sandbox detonation of email attachments."
+    },
+    {
+      "id": "REC.EXO.ORGCONFIG",
+      "title": "Exchange organization configuration",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.exchange.organizationconfig"],
+      "guidance": "Tenant-wide Exchange settings: mailbox auditing, SMTP AUTH, sharing policies. Changes affect all mailboxes."
+    },
+    {
+      "id": "REC.EXO.CONNECTORS",
+      "title": "Mail connectors (inbound and outbound)",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.exchange.inboundconnector", "microsoft.exchange.outboundconnector"],
+      "guidance": "Connectors route mail to/from partner organizations or on-premises. Unauthorized connectors can exfiltrate mail or bypass security scanning."
+    },
+    {
+      "id": "REC.EXO.OUTBOUNDSPAM",
+      "title": "Outbound spam filter policy",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.exchange.hostedoutboundspamfilterpolicy"],
+      "guidance": "Controls auto-forwarding rules and outbound spam thresholds. Disabling forwarding restrictions can enable data exfiltration."
+    },
+    {
+      "id": "REC.EXO.MALWARE",
+      "title": "Malware filter rules",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.exchange.malwarefilterrule"],
+      "guidance": "Controls malware detection scope and actions. Changes to rule conditions can exclude users from protection."
+    },
+    {
+      "id": "REC.TEAMS.FEDERATION",
+      "title": "Teams federation configuration",
+      "severity": "SHALL",
+      "resourceTypes": ["microsoft.teams.federationconfiguration"],
+      "guidance": "Controls which external domains can communicate with your users."
+    },
+    {
+      "id": "REC.TEAMS.MEETINGS",
+      "title": "Teams meeting policies and configuration",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.teams.meetingpolicy", "microsoft.teams.meetingconfiguration"],
+      "guidance": "Controls who can join meetings, present, record, and use AI features. Changes can expose meeting content to external participants."
+    },
+    {
+      "id": "REC.TEAMS.MESSAGING",
+      "title": "Teams messaging policies",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.teams.messagingpolicy"],
+      "guidance": "Controls message editing, deletion, read receipts, and URL previews."
+    },
+    {
+      "id": "REC.TEAMS.APPS",
+      "title": "Teams app permission policies",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.teams.apppermissionpolicy"],
+      "guidance": "Controls which apps users can install in Teams. Loosening restrictions can allow data-exfiltrating or malicious apps."
+    },
+    {
+      "id": "REC.INTUNE.ACCTPROT",
+      "title": "Intune account protection (local group membership)",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.intune.accountprotectionlocalusergroupmembershippolicy"],
+      "guidance": "Controls local admin group membership on managed devices. Changes can grant local admin to unauthorized users."
+    },
+    {
+      "id": "REC.SC.DLP",
+      "title": "DLP compliance policies",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.securityandcompliance.dlpcompliancepolicy"],
+      "guidance": "Data Loss Prevention policies protect sensitive data in Exchange, SharePoint, OneDrive, and Teams. Disabling or weakening DLP rules can expose PII, financial data, or health records."
+    },
+    {
+      "id": "REC.SC.RETENTION",
+      "title": "Retention policies and rules",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.securityandcompliance.retentioncompliancepolicy", "microsoft.securityandcompliance.retentioncompliancerule"],
+      "guidance": "Retention policies ensure data is kept for compliance or deleted on schedule. Changes can violate regulatory requirements or enable evidence spoliation."
+    },
+    {
+      "id": "REC.SC.LABELS",
+      "title": "Sensitivity label policies and tags",
+      "severity": "SHOULD",
+      "resourceTypes": ["microsoft.securityandcompliance.labelpolicy", "microsoft.securityandcompliance.compliancetag"],
+      "guidance": "Label policies publish sensitivity and retention labels to users. Changes can remove classification options or alter retention schedules."
+    }
+  ]
+}

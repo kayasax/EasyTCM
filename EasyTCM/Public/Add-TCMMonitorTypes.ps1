@@ -20,6 +20,8 @@ function Add-TCMMonitorTypes {
 
     .PARAMETER MonitorId
         The monitor to expand. If omitted, uses the first active monitor.
+    .PARAMETER MonitorName
+        Resolve monitor by display name instead of ID.
     .PARAMETER Template
         Name(s) of built-in templates (from templates/ folder).
         Available: EasyTCM-SecurityCritical, EasyTCM-Recommended,
@@ -45,6 +47,8 @@ function Add-TCMMonitorTypes {
     param(
         [string]$MonitorId,
 
+        [string]$MonitorName,
+
         [string[]]$Template,
 
         [string[]]$TemplatePath,
@@ -64,6 +68,19 @@ function Add-TCMMonitorTypes {
     Write-Host 'Retrieving current monitor...' -ForegroundColor White
     $monitor = if ($MonitorId) {
         Get-TCMMonitor -Id $MonitorId -IncludeBaseline
+    }
+    elseif ($MonitorName) {
+        $all = Get-TCMMonitor
+        $match = @($all) | Where-Object {
+            $dn = if ($_ -is [System.Collections.IDictionary]) { $_['displayName'] } else { $_.displayName }
+            $dn -eq $MonitorName
+        }
+        if (-not $match) {
+            Write-Error "No monitor found with name '$MonitorName'."
+            return
+        }
+        $matchId = if ($match -is [System.Collections.IDictionary]) { $match['id'] } else { $match.id }
+        Get-TCMMonitor -Id $matchId -IncludeBaseline
     }
     else {
         $all = Get-TCMMonitor

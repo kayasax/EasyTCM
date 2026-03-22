@@ -47,6 +47,7 @@
         'Get-TCMMonitor'
         'Update-TCMMonitor'
         'Remove-TCMMonitor'
+        'Add-TCMMonitorTypes'
         # Drift
         'Get-TCMDrift'
         'Get-TCMMonitoringResult'

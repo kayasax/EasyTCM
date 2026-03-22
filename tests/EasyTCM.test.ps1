@@ -24,6 +24,7 @@ Describe 'EasyTCM Module' {
             'Get-TCMMonitor'
             'Update-TCMMonitor'
             'Remove-TCMMonitor'
+            'Add-TCMMonitorTypes'
             'Get-TCMDrift'
             'Get-TCMMonitoringResult'
             'Export-TCMDriftReport'
@@ -315,6 +316,20 @@ Describe 'CISA SCuBA Template Structure' {
                 }
             }
         }
+    }
+}
+
+Describe 'Add-TCMMonitorTypes' {
+    It 'should exist as an exported function' {
+        Get-Command Add-TCMMonitorTypes -Module EasyTCM | Should -Not -BeNullOrEmpty
+    }
+
+    It 'should require -Template or -TemplatePath' {
+        { Add-TCMMonitorTypes -Force -ErrorAction Stop 2>$null } | Should -Throw
+    }
+
+    It 'should reject invalid template names' {
+        { Add-TCMMonitorTypes -Template 'NonExistent-Template' -Force -ErrorAction Stop } | Should -Throw
     }
 }
 

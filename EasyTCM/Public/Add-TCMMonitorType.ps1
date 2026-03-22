@@ -1,4 +1,4 @@
-function Add-TCMMonitorTypes {
+function Add-TCMMonitorType {
     <#
     .SYNOPSIS
         Add resource types from a template to an existing monitor without losing drift.
@@ -61,7 +61,7 @@ function Add-TCMMonitorTypes {
     }
 
     Write-Host ''
-    Write-Host '➕ Add-TCMMonitorTypes — Expand monitor coverage without rebaselining' -ForegroundColor Cyan
+    Write-Host '➕ Add-TCMMonitorType — Expand monitor coverage without rebaselining' -ForegroundColor Cyan
     Write-Host ''
 
     # ── Resolve monitor ─────────────────────────────────────────────
@@ -164,8 +164,6 @@ function Add-TCMMonitorTypes {
         Write-Host "    + $shortName ($nt)" -ForegroundColor Yellow
     }
 
-    # Quota impact
-    $newDailyCost = ($existingResources.Count + $newTypes.Count) * 4  # Rough estimate (1 instance per new type minimum)
     Write-Host ''
     Write-Host "  ⚠  Updating the baseline will clear existing drift records." -ForegroundColor Yellow
     Write-Host "     Existing drifts will be re-detected within 6 hours (baseline values preserved)." -ForegroundColor DarkGray

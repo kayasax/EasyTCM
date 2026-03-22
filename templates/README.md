@@ -5,6 +5,32 @@ Pre-built templates that scope your TCM monitor to the resource types that matte
 > **EasyTCM watches the config. Maester/ScubaGear checks the rules.**
 > Templates define *what to monitor*, not *how to evaluate*. Pair with Maester for compliance testing.
 
+> **Severity labels:** Controls use **SHALL** (mandatory — must be configured, non-compliance is a security gap) and **SHOULD** (recommended — best practice, but legitimate exceptions may exist). These follow [RFC 2119](https://datatracker.ietf.org/doc/html/rfc2119) and align with CISA SCuBA terminology.
+
+## Choosing a Template
+
+| If you are… | Start with | Why |
+|---|---|---|
+| **Admin / SecOps** — watching for unauthorized changes | `EasyTCM-SecurityCritical` or `EasyTCM-Recommended` | Covers the resource types most likely to cause security exposure if changed |
+| **Compliance** — aligning to CISA SCuBA / BOD 25-01 | `CISA-SCuBA-Entra`, `CISA-SCuBA-Exchange`, `CISA-SCuBA-Teams` | Maps directly to CISA control IDs for audit evidence |
+| **Both** — drift + compliance coverage | Combine them (see below) | Merged resource types in a single monitor |
+
+### Combining Templates
+
+The `-Template` parameter accepts **multiple names**. Resource types are merged, so you get a single monitor covering both drift detection and compliance scope:
+
+```powershell
+# Drift + CISA Entra compliance in one monitor
+ConvertTo-TCMBaseline -Template EasyTCM-SecurityCritical, CISA-SCuBA-Entra `
+  -SnapshotId $id | New-TCMMonitor -DisplayName 'Drift + CISA Entra'
+
+# Full CISA + recommended drift — maximum coverage
+ConvertTo-TCMBaseline -Template EasyTCM-Recommended, CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams `
+  -SnapshotId $id | New-TCMMonitor -DisplayName 'Full Coverage'
+```
+
+> **Quota check:** Combined templates increase resource types. Run `Get-TCMQuota` after creating the monitor to confirm you stay within the 200-instance limit.
+
 ## Available Templates
 
 ### EasyTCM Profiles — Security-prioritized monitoring
@@ -191,4 +217,4 @@ See [CONTRIBUTING.md](../CONTRIBUTING.md) for how to submit a template. Template
 1. Map to a recognized standard (CIS, CISA SCuBA, ISO 27001, etc.)
 2. Include only TCM-supported resource types
 3. Reference specific section numbers and control IDs
-4. Be tested with `ConvertTo-TCMBaseline -TemplatePath` and `Test-TCMCompliance`
+4. Be tested with `ConvertTo-TCMBaseline -TemplatePath`

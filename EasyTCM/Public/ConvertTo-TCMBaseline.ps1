@@ -36,6 +36,12 @@ function ConvertTo-TCMBaseline {
         Name for the generated baseline. Defaults to "Baseline from snapshot".
     .PARAMETER Description
         Optional description for the baseline.
+    .PARAMETER Template
+        Name(s) of built-in compliance templates (from templates/ folder).
+        Overrides -Profile. Resource types are merged from all specified templates.
+        Available: CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams
+    .PARAMETER TemplatePath
+        Path(s) to custom template JSON files. Overrides -Profile.
     .PARAMETER ExcludeResources
         Resource type names to exclude from the baseline (applied after profile filter).
     .EXAMPLE
@@ -45,6 +51,14 @@ function ConvertTo-TCMBaseline {
     .EXAMPLE
         # Broader coverage
         ConvertTo-TCMBaseline -SnapshotId $id -Profile Recommended
+
+    .EXAMPLE
+        # CISA SCuBA Entra baseline
+        ConvertTo-TCMBaseline -SnapshotId $id -Template CISA-SCuBA-Entra
+
+    .EXAMPLE
+        # Combined CISA SCuBA templates
+        ConvertTo-TCMBaseline -SnapshotId $id -Template CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams
 
     .EXAMPLE
         # Everything (check your quota first with Get-TCMQuota)
@@ -60,6 +74,10 @@ function ConvertTo-TCMBaseline {
 
         [ValidateSet('SecurityCritical', 'Recommended', 'Full')]
         [string]$Profile = 'SecurityCritical',
+
+        [string[]]$Template,
+
+        [string[]]$TemplatePath,
 
         [string]$DisplayName = 'Baseline from snapshot',
 
@@ -82,9 +100,41 @@ function ConvertTo-TCMBaseline {
             throw 'No snapshot content provided. Use -SnapshotId or pipe a snapshot with content.'
         }
 
-        # Resolve profile filter
+        # Resolve resource type filter from template(s), template path(s), or profile
         $profileFilter = $null
-        if ($Profile -ne 'Full') {
+        $templateMetadata = @()
+
+        if ($Template -or $TemplatePath) {
+            $allTypes = [System.Collections.Generic.List[string]]::new()
+            $templatesDir = Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) 'templates'
+
+            foreach ($name in @($Template)) {
+                if (-not $name) { continue }
+                $fileName = $name.ToLower() + '.json'
+                $path = Join-Path $templatesDir $fileName
+                if (-not (Test-Path $path)) {
+                    throw "Template '$name' not found at: $path"
+                }
+                $tmpl = Get-Content $path -Raw | ConvertFrom-Json
+                $templateMetadata += $tmpl.metadata
+                foreach ($rt in $tmpl.resourceTypes) { if ($rt -notin $allTypes) { $allTypes.Add($rt) } }
+            }
+
+            foreach ($path in @($TemplatePath)) {
+                if (-not $path) { continue }
+                if (-not (Test-Path $path)) {
+                    throw "Template file not found: $path"
+                }
+                $tmpl = Get-Content $path -Raw | ConvertFrom-Json
+                $templateMetadata += $tmpl.metadata
+                foreach ($rt in $tmpl.resourceTypes) { if ($rt -notin $allTypes) { $allTypes.Add($rt) } }
+            }
+
+            $profileFilter = $allTypes.ToArray()
+            $names = ($templateMetadata | ForEach-Object { $_.displayName }) -join ' + '
+            Write-Host "Template(s): $names — filtering to $($profileFilter.Count) resource types" -ForegroundColor Cyan
+        }
+        elseif ($Profile -ne 'Full') {
             $profiles = Get-TCMMonitoringProfile
             $profileFilter = $profiles[$Profile]
             Write-Host "Profile '$Profile': filtering to $($profileFilter.Count) resource types" -ForegroundColor Cyan

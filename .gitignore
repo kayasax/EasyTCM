@@ -43,3 +43,5 @@ tests/Maester/
 test-results/
 tests/Maester/
 sc-types.txt
+.github/
+EasyTCM/Public/Register-TCMGitHubWorkflow.ps1

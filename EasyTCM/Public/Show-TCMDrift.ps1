@@ -20,6 +20,11 @@ function Show-TCMDrift {
         Uses a snapshot (quota impact) but results are cached for 1 hour.
     .PARAMETER MonitorId
         Check a specific monitor. If omitted, checks all monitors.
+    .PARAMETER Notify
+        Send a notification when drift is detected. Currently supports 'Teams'.
+    .PARAMETER WebhookUrl
+        Teams incoming webhook URL. Required when -Notify Teams is specified.
+        Store in a variable or secret manager — not in scripts.
     .PARAMETER PassThru
         Return the drift objects for pipeline processing.
     .EXAMPLE
@@ -35,6 +40,10 @@ function Show-TCMDrift {
         Show-TCMDrift -Maester -CompareBaseline
 
     .EXAMPLE
+        # Send Teams notification when drift is found
+        Show-TCMDrift -Notify Teams -WebhookUrl $env:EASYTCM_WEBHOOK_URL
+
+    .EXAMPLE
         # Pipeline: get drifted resource details
         Show-TCMDrift -PassThru | Where-Object { $_.DriftedPropertyCount -gt 0 }
     #>
@@ -43,9 +52,20 @@ function Show-TCMDrift {
         [switch]$Report,
         [switch]$Maester,
         [switch]$CompareBaseline,
+        [ValidateSet('Teams')]
+        [string]$Notify,
+        [string]$WebhookUrl,
         [string]$MonitorId,
         [switch]$PassThru
     )
+
+    # Resolve webhook URL from parameter or environment variable
+    if ($Notify -and -not $WebhookUrl) {
+        $WebhookUrl = $env:EASYTCM_WEBHOOK_URL
+    }
+    if ($Notify -and -not $WebhookUrl) {
+        throw 'WebhookUrl is required when -Notify is specified. Use -WebhookUrl or set $env:EASYTCM_WEBHOOK_URL.'
+    }
 
     # ── Resolve mode ────────────────────────────────────────────────
 
@@ -72,6 +92,14 @@ function Show-TCMDrift {
         if ($MonitorId) { $reportParams.MonitorId = $MonitorId }
         if ($CompareBaseline) { $reportParams.CompareBaseline = $true }
         $result = Export-TCMDriftReport @reportParams
+        # Send notification if requested
+        if ($Notify -eq 'Teams') {
+            $monitors = if ($MonitorId) { @(Get-TCMMonitor -Id $MonitorId) } else { @(Get-TCMMonitor) }
+            foreach ($mon in $monitors) {
+                $monDrifts = @($activeDrifts | Where-Object { $_.MonitorId -eq $mon.Id })
+                Send-TCMNotification -Drifts $monDrifts -Monitor $mon -WebhookUrl $WebhookUrl
+            }
+        }
         if ($PassThru) { return $result }
         return
     }
@@ -92,6 +120,14 @@ function Show-TCMDrift {
         if (Test-Path $driftPath) {
             Write-Host ''
             Invoke-Maester -Path $driftPath
+        }
+        # Send notification if requested
+        if ($Notify -eq 'Teams') {
+            $monitors = if ($MonitorId) { @(Get-TCMMonitor -Id $MonitorId) } else { @(Get-TCMMonitor) }
+            foreach ($mon in $monitors) {
+                $monDrifts = @($activeDrifts | Where-Object { $_.MonitorId -eq $mon.Id })
+                Send-TCMNotification -Drifts $monDrifts -Monitor $mon -WebhookUrl $WebhookUrl
+            }
         }
         return
     }
@@ -139,6 +175,7 @@ function Show-TCMDrift {
     }
 
     # Optional: baseline comparison
+    $comparison = $null
     if ($CompareBaseline) {
         Write-Host '  🔗 Checking for untracked resources...' -ForegroundColor Cyan
         $compareParams = @{}
@@ -154,8 +191,18 @@ function Show-TCMDrift {
         Write-Host ''
     }
 
+    # ── Notification ────────────────────────────────────────────────
+    if ($Notify -eq 'Teams') {
+        foreach ($mon in $monitors) {
+            $monDrifts = if ($MonitorId) { $drifts } else {
+                @($drifts | Where-Object { $_.MonitorId -eq $mon.Id })
+            }
+            Send-TCMNotification -Drifts $monDrifts -Monitor $mon -WebhookUrl $WebhookUrl -CompareResult $comparison
+        }
+    }
+
     # Hints
-    if (-not $Report -and -not $Maester) {
+    if (-not $Report -and -not $Maester -and -not $Notify) {
         Write-Host '  Commands:' -ForegroundColor DarkGray
         Write-Host '    Show-TCMDrift -Report           # detailed HTML report' -ForegroundColor DarkGray
         Write-Host '    Show-TCMDrift -Maester           # Maester test results' -ForegroundColor DarkGray

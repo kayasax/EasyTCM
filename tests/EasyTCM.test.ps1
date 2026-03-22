@@ -30,6 +30,10 @@ Describe 'EasyTCM Module' {
             'Compare-TCMBaseline'
             'Get-TCMQuota'
             'Sync-TCMDriftToMaester'
+            'Start-TCMMonitoring'
+            'Show-TCMDrift'
+            'Update-TCMBaseline'
+            'Register-TCMSchedule'
         )
 
         $module = Get-Module EasyTCM
@@ -180,3 +184,138 @@ Describe 'Compare-TCMBaseline' {
         $cmd.Parameters.Keys | Should -Contain 'WhatIf'
     }
 }
+
+Describe 'ConvertTo-TCMBaseline -Template' {
+    BeforeAll {
+        $templatesDir = Join-Path $PSScriptRoot '..' 'templates'
+    }
+
+    It 'should have CISA SCuBA Entra template file' {
+        Join-Path $templatesDir 'cisa-scuba-entra.json' | Should -Exist
+    }
+
+    It 'should have CISA SCuBA Exchange template file' {
+        Join-Path $templatesDir 'cisa-scuba-exchange.json' | Should -Exist
+    }
+
+    It 'should have CISA SCuBA Teams template file' {
+        Join-Path $templatesDir 'cisa-scuba-teams.json' | Should -Exist
+    }
+
+    It 'should accept -Template parameter' {
+        $cmd = Get-Command ConvertTo-TCMBaseline -Module EasyTCM
+        $cmd.Parameters.Keys | Should -Contain 'Template'
+        $cmd.Parameters.Keys | Should -Contain 'TemplatePath'
+    }
+
+    It 'should filter resources by template resource types' {
+        $mockSnapshot = @{
+            resources = @(
+                @{
+                    resourceType = 'microsoft.entra.conditionalaccesspolicy'
+                    displayName  = 'Block Legacy Auth'
+                    properties   = @{ State = 'enabled'; GrantType = 'block' }
+                }
+                @{
+                    resourceType = 'microsoft.intune.devicecompliancepolicy'
+                    displayName  = 'Windows Compliance'
+                    properties   = @{ State = 'active' }
+                }
+            )
+        }
+
+        $templateFile = Join-Path $templatesDir 'cisa-scuba-entra.json'
+        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -TemplatePath $templateFile -DisplayName 'Template Test'
+
+        # Only the CA policy should survive — Intune not in Entra template
+        $baseline.Resources | Should -HaveCount 1
+        $baseline.Resources[0].ResourceType | Should -Be 'microsoft.entra.conditionalaccesspolicy'
+    }
+
+    It 'should merge resource types from multiple templates' {
+        $mockSnapshot = @{
+            resources = @(
+                @{
+                    resourceType = 'microsoft.entra.conditionalaccesspolicy'
+                    displayName  = 'Block Legacy Auth'
+                    properties   = @{ State = 'enabled' }
+                }
+                @{
+                    resourceType = 'microsoft.exchange.transportrule'
+                    displayName  = 'External Warning'
+                    properties   = @{ Name = 'External Warning' }
+                }
+            )
+        }
+
+        $entraFile = Join-Path $templatesDir 'cisa-scuba-entra.json'
+        $exoFile = Join-Path $templatesDir 'cisa-scuba-exchange.json'
+        $baseline = ConvertTo-TCMBaseline -SnapshotContent $mockSnapshot -TemplatePath $entraFile, $exoFile
+
+        # Both should survive — one from Entra template, one from Exchange template
+        $baseline.Resources | Should -HaveCount 2
+    }
+}
+
+Describe 'CISA SCuBA Template Structure' {
+    BeforeAll {
+        $templatesDir = Join-Path $PSScriptRoot '..' 'templates'
+    }
+
+    It 'should have valid JSON structure in each template' {
+        $files = Get-ChildItem $templatesDir -Filter '*.json'
+        $files.Count | Should -BeGreaterOrEqual 3
+
+        foreach ($file in $files) {
+            $content = Get-Content $file.FullName -Raw
+            { $content | ConvertFrom-Json } | Should -Not -Throw -Because "$($file.Name) should be valid JSON"
+        }
+    }
+
+    It 'should have required metadata fields' {
+        $files = Get-ChildItem $templatesDir -Filter '*.json'
+        foreach ($file in $files) {
+            $tmpl = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            $tmpl.metadata | Should -Not -BeNullOrEmpty
+            $tmpl.metadata.standard | Should -Not -BeNullOrEmpty
+            $tmpl.metadata.category | Should -Not -BeNullOrEmpty
+            $tmpl.metadata.displayName | Should -Not -BeNullOrEmpty
+        }
+    }
+
+    It 'should have at least one resourceType in each template' {
+        $files = Get-ChildItem $templatesDir -Filter '*.json'
+        foreach ($file in $files) {
+            $tmpl = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            $tmpl.resourceTypes.Count | Should -BeGreaterOrEqual 1
+        }
+    }
+
+    It 'should have controls with required fields' {
+        $files = Get-ChildItem $templatesDir -Filter '*.json'
+        foreach ($file in $files) {
+            $tmpl = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            $tmpl.controls.Count | Should -BeGreaterOrEqual 1
+            foreach ($ctrl in $tmpl.controls) {
+                $ctrl.id | Should -Not -BeNullOrEmpty
+                $ctrl.title | Should -Not -BeNullOrEmpty
+                $ctrl.severity | Should -BeIn @('SHALL', 'SHOULD', 'MAY')
+                $ctrl.resourceTypes | Should -Not -BeNullOrEmpty
+            }
+        }
+    }
+
+    It 'should only reference resource types listed in resourceTypes array' {
+        $files = Get-ChildItem $templatesDir -Filter '*.json'
+        foreach ($file in $files) {
+            $tmpl = Get-Content $file.FullName -Raw | ConvertFrom-Json
+            foreach ($ctrl in $tmpl.controls) {
+                foreach ($rt in $ctrl.resourceTypes) {
+                    $tmpl.resourceTypes | Should -Contain $rt -Because "Control $($ctrl.id) references '$rt' which should be in template resourceTypes"
+                }
+            }
+        }
+    }
+}
+
+

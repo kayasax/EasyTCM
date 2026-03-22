@@ -1,0 +1,228 @@
+{
+  "metadata": {
+    "standard": "CISA-SCuBA",
+    "version": "2024.03",
+    "category": "Exchange Online",
+    "displayName": "CISA SCuBA - Exchange Online",
+    "description": "TCM monitoring template aligned with CISA SCuBA baseline for Exchange Online. Covers email authentication (DKIM), anti-phishing, anti-spam, safe links, safe attachments, transport rules, and organization config.",
+    "url": "https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/exo.md",
+    "license": "Portions adapted from CISA SCuBA SCBs (TLP:CLEAR). See URL for full license terms."
+  },
+  "resourceTypes": [
+    "microsoft.exchange.antiphishpolicy",
+    "microsoft.exchange.antiphishrule",
+    "microsoft.exchange.hostedcontentfilterpolicy",
+    "microsoft.exchange.hostedoutboundspamfilterpolicy",
+    "microsoft.exchange.safeattachmentpolicy",
+    "microsoft.exchange.safelinkspolicy",
+    "microsoft.exchange.transportrule",
+    "microsoft.exchange.dkimsigningconfig",
+    "microsoft.exchange.organizationconfig",
+    "microsoft.exchange.malwarefilterrule",
+    "microsoft.exchange.inboundconnector",
+    "microsoft.exchange.outboundconnector"
+  ],
+  "controls": [
+    {
+      "id": "MS.EXO.1.1v2",
+      "title": "Automatic forwarding to external domains SHALL be disabled",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.organizationconfig"
+      ],
+      "guidance": "Remote domains 'Default' SHALL have automatic forwarding disabled. TCM monitors the OrganizationConfig and remote domain settings for drift that may re-enable auto-forwarding.",
+      "nistMapping": "AC-4",
+      "mitreMapping": [
+        "T1567",
+        "T1048",
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.EXO.3.1v1",
+      "title": "DKIM SHOULD be enabled for all domains",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.dkimsigningconfig"
+      ],
+      "guidance": "DKIM signing SHALL be enabled for all custom domains. TCM monitors the DkimSigningConfig Enabled property — drift means DKIM may be disabled.",
+      "nistMapping": "SC-8",
+      "mitreMapping": [
+        "T1598",
+        "T1656",
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.EXO.5.1v1",
+      "title": "SMTP AUTH SHALL be disabled",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.organizationconfig"
+      ],
+      "guidance": "SMTP AUTH SHALL be disabled at the organization level. Modern email clients do not need it and MFA cannot be enforced when using SMTP AUTH. Monitor OrganizationConfig for changes.",
+      "nistMapping": "CM-7",
+      "mitreMapping": []
+    },
+    {
+      "id": "MS.EXO.6.1v1",
+      "title": "Contact folders SHALL NOT be shared with all domains",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.organizationconfig"
+      ],
+      "guidance": "Sharing policies SHALL NOT share contact folders with all domains. TCM monitors organization-level sharing settings for drift.",
+      "nistMapping": "AC-3, SC-7(10)(a)",
+      "mitreMapping": [
+        "T1567",
+        "T1048"
+      ]
+    },
+    {
+      "id": "MS.EXO.6.2v1",
+      "title": "Calendar details SHALL NOT be shared with all domains",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.organizationconfig"
+      ],
+      "guidance": "Sharing policies SHALL NOT share calendar details with all domains. TCM monitors organization-level sharing settings for drift.",
+      "nistMapping": "AC-3, SC-7(10)(a)",
+      "mitreMapping": [
+        "T1567",
+        "T1048"
+      ]
+    },
+    {
+      "id": "MS.EXO.7.1v1",
+      "title": "External sender warnings SHALL be implemented",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.transportrule"
+      ],
+      "guidance": "A mail flow (transport) rule SHALL prepend external sender warnings (e.g. '[External]') to the subject of emails from outside the organization. TCM monitors transport rules for drift that may disable this warning.",
+      "nistMapping": "SI-8",
+      "mitreMapping": [
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.EXO.11.1v1",
+      "title": "Impersonation protection checks SHOULD be used",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.antiphishpolicy",
+        "microsoft.exchange.antiphishrule"
+      ],
+      "guidance": "Anti-phishing policies SHOULD have impersonation protection enabled. TCM monitors AntiPhishPolicy settings — drift may weaken impersonation detection.",
+      "nistMapping": "SI-8",
+      "mitreMapping": [
+        "T1566",
+        "T1656"
+      ]
+    },
+    {
+      "id": "MS.EXO.11.3v1",
+      "title": "AI-based phishing detection (Mailbox Intelligence) SHOULD be enabled",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.antiphishpolicy"
+      ],
+      "guidance": "Anti-phishing policies SHOULD enable Mailbox Intelligence for AI-based phishing detection. TCM monitors AntiPhishPolicy for drift on intelligence settings.",
+      "nistMapping": "SI-8",
+      "mitreMapping": [
+        "T1566",
+        "T1656"
+      ]
+    },
+    {
+      "id": "MS.EXO.12.1v1",
+      "title": "IP allow lists SHOULD NOT be created",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.hostedcontentfilterpolicy"
+      ],
+      "guidance": "IP allow lists bypass spam filtering and sender authentication. TCM monitors HostedContentFilterPolicy for drift that may add IPs to allow lists.",
+      "nistMapping": "AC-4",
+      "mitreMapping": []
+    },
+    {
+      "id": "MS.EXO.12.2v1",
+      "title": "Safe lists SHOULD NOT be enabled",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.hostedcontentfilterpolicy"
+      ],
+      "guidance": "Safe lists bypass spam filtering. TCM monitors HostedContentFilterPolicy for drift that may enable safe lists.",
+      "nistMapping": "AC-4",
+      "mitreMapping": []
+    },
+    {
+      "id": "MS.EXO.13.1v1",
+      "title": "Mailbox auditing SHALL be enabled",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.exchange.organizationconfig"
+      ],
+      "guidance": "Mailbox auditing SHALL be enabled at the organization level. TCM monitors OrganizationConfig AuditDisabled property — drift to 'true' means auditing was disabled.",
+      "nistMapping": "AU-12c",
+      "mitreMapping": [
+        "T1070",
+        "T1098",
+        "T1562"
+      ]
+    },
+    {
+      "id": "MS.EXO.14.3v1",
+      "title": "Allowed domains SHALL NOT be added to anti-spam policies",
+      "severity": "SHALL",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.hostedcontentfilterpolicy"
+      ],
+      "guidance": "Adding allowed domains (like office.com) to anti-spam policies bypasses filtering for many unknown users. TCM monitors HostedContentFilterPolicy for drift.",
+      "nistMapping": "SI-8",
+      "mitreMapping": [
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.EXO.15.1v1",
+      "title": "URL comparison with a block-list SHOULD be enabled",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.safelinkspolicy"
+      ],
+      "guidance": "Safe Links SHOULD scan URLs against a block list. TCM monitors SafeLinksPolicy for drift that may disable URL scanning.",
+      "nistMapping": "SI-3",
+      "mitreMapping": [
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.EXO.15.2v1",
+      "title": "Direct download links SHOULD be scanned for malware",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.exchange.safelinkspolicy"
+      ],
+      "guidance": "Safe Links SHOULD scan direct download links in real-time. TCM monitors SafeLinksPolicy for drift on file scanning settings.",
+      "nistMapping": "SI-3",
+      "mitreMapping": [
+        "T1566"
+      ]
+    }
+  ]
+}

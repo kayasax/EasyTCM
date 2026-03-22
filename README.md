@@ -80,6 +80,94 @@ Show-TCMDrift -CompareBaseline   # also catch new/deleted resources
 
 ---
 
+## 🏛️ CISA SCuBA Baseline Templates
+
+Scope your TCM monitor to **only the resource types that matter for CISA compliance**. When a CISA-relevant config changes, you'll know within 6 hours.
+
+```powershell
+# Create a CISA-scoped monitor in one pipeline
+New-TCMSnapshot -Wait | ConvertTo-TCMBaseline -Template CISA-SCuBA-Entra -DisplayName 'CISA Entra' | New-TCMMonitor
+
+# Or combine all three workloads
+$snap = New-TCMSnapshot -Workload Entra, Exchange, Teams -Wait
+ConvertTo-TCMBaseline -SnapshotContent $snap -Template CISA-SCuBA-Entra, CISA-SCuBA-Exchange, CISA-SCuBA-Teams
+```
+
+> **EasyTCM watches the config. Maester/ScubaGear checks the rules.**
+> Use `Show-TCMDrift -Maester` to pipe TCM drift into Maester's test framework for unified reporting.
+
+Three built-in templates cover 41 CISA SCuBA controls across 23 TCM resource types:
+
+<details>
+<summary><strong>CISA-SCuBA-Entra</strong> — 18 controls, 6 resource types</summary>
+
+| Control | Severity | BOD 25-01 | What TCM Monitors |
+|---|---|---|---|
+| MS.AAD.1.1v1 | SHALL | ✅ | CA policy blocking legacy auth |
+| MS.AAD.2.1v1 | SHALL | ✅ | CA policy blocking high-risk users |
+| MS.AAD.2.3v1 | SHALL | ✅ | CA policy blocking high-risk sign-ins |
+| MS.AAD.3.1v1 | SHALL | ✅ | CA policy enforcing phishing-resistant MFA |
+| MS.AAD.3.2v1 | SHALL | ✅ | CA policy enforcing alternative MFA |
+| MS.AAD.3.3v2 | SHALL | ✅ | Authenticator login context (auth method policy) |
+| MS.AAD.3.4v1 | SHALL | ✅ | Auth Methods migration state (auth method policy) |
+| MS.AAD.3.5v2 | SHALL | ✅ | SMS/Voice/Email OTP disabled (auth method policy) |
+| MS.AAD.3.6v1 | SHALL | ✅ | CA policy for privileged role MFA |
+| MS.AAD.3.7v1 | SHOULD | | CA policy requiring managed devices |
+| MS.AAD.3.8v1 | SHOULD | | CA policy for MFA registration device requirement |
+| MS.AAD.3.9v1 | SHOULD | | CA policy blocking device code flow |
+| MS.AAD.5.1v1 | SHALL | ✅ | App registration restriction (authorization policy) |
+| MS.AAD.5.2v1 | SHALL | ✅ | App consent restriction (authorization policy) |
+| MS.AAD.5.3v1 | SHALL | ✅ | Admin consent workflow (authorization policy) |
+| MS.AAD.8.1v1 | SHOULD | | Guest directory access (authorization policy) |
+| MS.AAD.8.2v1 | SHOULD | | Guest invitation policy (cross-tenant access) |
+| MS.AAD.8.3v1 | SHOULD | | Guest domain restrictions (cross-tenant access) |
+
+Resource types: `conditionalaccesspolicy`, `authenticationmethodpolicy`, `authorizationpolicy`, `crosstenantaccesspolicy`, `crosstenantaccesspolicyconfigurationpartner`, `namedlocationpolicy`
+</details>
+
+<details>
+<summary><strong>CISA-SCuBA-Exchange</strong> — 14 controls, 12 resource types</summary>
+
+| Control | Severity | BOD 25-01 | What TCM Monitors |
+|---|---|---|---|
+| MS.EXO.1.1v2 | SHALL | ✅ | Auto-forwarding (outbound spam filter) |
+| MS.EXO.3.1v1 | SHOULD | | DKIM signing config |
+| MS.EXO.5.1v1 | SHALL | ✅ | SMTP AUTH (organization config) |
+| MS.EXO.6.1v1 | SHALL | ✅ | Contact folder sharing (organization config) |
+| MS.EXO.6.2v1 | SHALL | ✅ | Calendar sharing (organization config) |
+| MS.EXO.7.1v1 | SHALL | ✅ | External sender warnings (transport rules) |
+| MS.EXO.11.1v1 | SHOULD | | Impersonation protection (anti-phish policy) |
+| MS.EXO.11.3v1 | SHOULD | | Mailbox Intelligence (anti-phish policy) |
+| MS.EXO.12.1v1 | SHOULD | | IP allow lists (content filter policy) |
+| MS.EXO.12.2v1 | SHOULD | | Safe lists (content filter policy) |
+| MS.EXO.13.1v1 | SHALL | ✅ | Mailbox auditing (organization config) |
+| MS.EXO.14.3v1 | SHALL | | Allowed domains in anti-spam |
+| MS.EXO.15.1v1 | SHOULD | | Safe Links URL scanning |
+| MS.EXO.15.2v1 | SHOULD | | Safe Attachments malware scanning |
+
+Resource types: `antiphishpolicy`, `antiphishrule`, `hostedcontentfilterpolicy`, `hostedoutboundspamfilterpolicy`, `safeattachmentpolicy`, `safelinkspolicy`, `transportrule`, `dkimsigningconfig`, `organizationconfig`, `malwarefilterrule`, `inboundconnector`, `outboundconnector`
+</details>
+
+<details>
+<summary><strong>CISA-SCuBA-Teams</strong> — 9 controls, 5 resource types</summary>
+
+| Control | Severity | BOD 25-01 | What TCM Monitors |
+|---|---|---|---|
+| MS.TEAMS.1.1v1 | SHALL | ✅ | External access per-domain (federation config) |
+| MS.TEAMS.1.2v1 | SHALL | ✅ | Authorized domains only (federation config) |
+| MS.TEAMS.1.3v1 | SHALL | ✅ | Unmanaged user contact (federation config) |
+| MS.TEAMS.1.4v1 | SHOULD | | Skype interop (federation config) |
+| MS.TEAMS.2.1v1 | SHALL | ✅ | Anonymous meeting join (meeting policy) |
+| MS.TEAMS.2.2v1 | SHOULD | | Anonymous auto-admit (meeting config) |
+| MS.TEAMS.2.3v1 | SHOULD | | External participant control (meeting policy) |
+| MS.TEAMS.4.1v1 | SHOULD | | App permission policy |
+| MS.TEAMS.6.1v1 | SHOULD | | Security reporting (messaging policy) |
+
+Resource types: `federationconfiguration`, `meetingpolicy`, `messagingpolicy`, `apppermissionpolicy`, `meetingconfiguration`
+</details>
+
+---
+
 ## 📦 Install
 
 ```powershell
@@ -106,18 +194,19 @@ Install-Module EasyTCM -Scope CurrentUser
 
 ---
 
-## 🔧 All 19 Cmdlets
+## 🔧 All 20 Cmdlets
 
 <details>
 <summary>Click to expand the full cmdlet reference</summary>
 
-### Easy Buttons (v0.3.0)
+### Easy Buttons (v0.3.0+)
 
 | Cmdlet | Description |
 |---|---|
 | `Start-TCMMonitoring` | Guided wizard: connect → setup → snapshot → baseline → monitor |
 | `Show-TCMDrift` | Daily drift check: console, `-Report` HTML, `-Maester` tests |
 | `Update-TCMBaseline` | Rebaseline after approved changes |
+| `Register-TCMSchedule` | One-command setup for automated drift monitoring with Teams notifications |
 
 ### Setup
 
@@ -133,7 +222,7 @@ Install-Module EasyTCM -Scope CurrentUser
 | `New-TCMSnapshot` | Snapshot tenant config with workload shortcuts + `-Wait` |
 | `Get-TCMSnapshot` | Retrieve snapshots with optional `-IncludeContent` |
 | `Remove-TCMSnapshot` | Delete a snapshot job |
-| `ConvertTo-TCMBaseline` | Snapshot → baseline with profiles (SecurityCritical / Recommended / Full) |
+| `ConvertTo-TCMBaseline` | Snapshot → baseline with profiles or `-Template` compliance filtering |
 
 ### Monitors
 
@@ -167,6 +256,8 @@ Install-Module EasyTCM -Scope CurrentUser
 ## 🌐 Coverage
 
 6 workloads, 62 resource types: **Entra** (CA policies, auth methods, named locations) · **Exchange** (transport rules, anti-phishing, DKIM) · **Intune** (device config) · **Teams** (meeting/messaging policies, federation) · **Security & Compliance** (DLP, retention, sensitivity labels)
+
+**Compliance templates:** 3 CISA SCuBA baselines (Entra, Exchange, Teams) scope your monitors to security-relevant resource types. See [templates/](templates/).
 
 ---
 

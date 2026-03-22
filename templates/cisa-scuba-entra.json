@@ -1,0 +1,279 @@
+{
+  "metadata": {
+    "standard": "CISA-SCuBA",
+    "version": "2024.03",
+    "category": "Entra ID",
+    "displayName": "CISA SCuBA - Microsoft Entra ID",
+    "description": "TCM monitoring template aligned with CISA Secure Cloud Business Applications (SCuBA) baseline for Microsoft Entra ID. Covers conditional access, authentication methods, authorization, cross-tenant access, and named locations.",
+    "url": "https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/aad.md",
+    "license": "Portions adapted from CISA SCuBA SCBs (TLP:CLEAR). See URL for full license terms."
+  },
+  "resourceTypes": [
+    "microsoft.entra.conditionalaccesspolicy",
+    "microsoft.entra.authenticationmethodpolicy",
+    "microsoft.entra.authorizationpolicy",
+    "microsoft.entra.crosstenantaccesspolicy",
+    "microsoft.entra.crosstenantaccesspolicyconfigurationpartner",
+    "microsoft.entra.namedlocationpolicy"
+  ],
+  "controls": [
+    {
+      "id": "MS.AAD.1.1v1",
+      "title": "Legacy authentication SHALL be blocked",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHALL be configured to block legacy authentication (Exchange ActiveSync + Other clients) for all users. Drift on this CA policy means legacy auth may be re-enabled.",
+      "nistMapping": "CM-7",
+      "mitreMapping": [
+        "T1110",
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.2.1v1",
+      "title": "Users detected as high risk SHALL be blocked",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHALL block users categorized as high risk by Identity Protection. Requires Entra ID P2.",
+      "nistMapping": "AC-2(12), AC-2(13)",
+      "mitreMapping": [
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.2.3v1",
+      "title": "Sign-ins detected as high risk SHALL be blocked",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHALL block sign-ins determined high risk by Identity Protection. Requires Entra ID P2.",
+      "nistMapping": "AC-2(12), AC-2(13)",
+      "mitreMapping": [
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.1v1",
+      "title": "Phishing-resistant MFA SHALL be enforced for all users",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHALL require phishing-resistant MFA (FIDO2, Windows Hello, Entra CBA, device-bound passkeys) for all users on all resources.",
+      "nistMapping": "IA-2(1), IA-2(2), IA-5c, IA-5g, IA-2(8)",
+      "mitreMapping": [
+        "T1566",
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.2v1",
+      "title": "Alternative MFA SHALL be enforced if phishing-resistant MFA not yet deployed",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "If phishing-resistant MFA is not enforced yet, a Conditional Access policy SHALL require MFA for all users. This is a stopgap measure.",
+      "nistMapping": "IA-2(1), IA-2(2)",
+      "mitreMapping": [
+        "T1110",
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.3v2",
+      "title": "Microsoft Authenticator SHALL show login context information",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authenticationmethodpolicy"
+      ],
+      "guidance": "If Microsoft Authenticator is enabled, it SHALL display application name and geographic location in push/passwordless notifications. Monitor the AuthenticationMethodPolicy for changes to these settings.",
+      "nistMapping": "IA-2(1), IA-2(2), IA-5c, IA-5g, IA-2(8), IA-2(13)",
+      "mitreMapping": [
+        "T1110",
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.4v1",
+      "title": "Authentication Methods migration SHALL be set to Migration Complete",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authenticationmethodpolicy"
+      ],
+      "guidance": "The Manage Migration feature SHALL be set to Migration Complete to disable the legacy MFA/SSPR screen. TCM monitors the PolicyMigrationState property.",
+      "nistMapping": "CM-7",
+      "mitreMapping": []
+    },
+    {
+      "id": "MS.AAD.3.5v2",
+      "title": "SMS, Voice Call, and Email OTP SHALL be disabled",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authenticationmethodpolicy"
+      ],
+      "guidance": "The authentication methods SMS, Voice Call, and Email One-Time Passcode (OTP) SHALL be disabled. These are the weakest authenticators. Monitor the AuthenticationMethodPolicy for re-enablement.",
+      "nistMapping": "CM-7b, IA-5c",
+      "mitreMapping": [
+        "T1621",
+        "T1566"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.6v1",
+      "title": "Phishing-resistant MFA SHALL be required for highly privileged roles",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A dedicated Conditional Access policy SHALL enforce phishing-resistant MFA for Global Admin, Privileged Role Admin, User Admin, SharePoint Admin, Exchange Admin, Hybrid Identity Admin, Application Admin, and Cloud Application Admin.",
+      "nistMapping": "IA-2(1), IA-5c, IA-5g, IA-2(8)",
+      "mitreMapping": [
+        "T1566",
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.7v1",
+      "title": "Managed devices SHOULD be required for authentication",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHOULD require that devices be Microsoft Entra hybrid joined or Intune compliant. Requires Microsoft Intune.",
+      "nistMapping": "AC-20b, IA-3",
+      "mitreMapping": [
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.8v1",
+      "title": "Managed devices SHOULD be required to register MFA",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHOULD require a managed device when registering security information. Prevents adversaries from registering their own MFA device.",
+      "nistMapping": "AC-20b, IA-3",
+      "mitreMapping": [
+        "T1098"
+      ]
+    },
+    {
+      "id": "MS.AAD.3.9v1",
+      "title": "Device code authentication SHOULD be blocked",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.conditionalaccesspolicy"
+      ],
+      "guidance": "A Conditional Access policy SHOULD block device code authentication flow to prevent device code phishing attacks.",
+      "nistMapping": "CM-7",
+      "mitreMapping": [
+        "T1528",
+        "T1078"
+      ]
+    },
+    {
+      "id": "MS.AAD.5.1v1",
+      "title": "Only administrators SHALL be allowed to register applications",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authorizationpolicy"
+      ],
+      "guidance": "In User Settings, 'Users can register applications' SHALL be set to No. Monitor the AuthorizationPolicy for changes.",
+      "nistMapping": "AC-6(10), CM-5",
+      "mitreMapping": [
+        "T1098"
+      ]
+    },
+    {
+      "id": "MS.AAD.5.2v1",
+      "title": "Only administrators SHALL be allowed to consent to applications",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authorizationpolicy"
+      ],
+      "guidance": "Under Consent and permissions, 'User consent for applications' SHALL be set to 'Do not allow user consent'. Monitor the AuthorizationPolicy for changes.",
+      "nistMapping": "AC-6(10), CM-5",
+      "mitreMapping": [
+        "T1098"
+      ]
+    },
+    {
+      "id": "MS.AAD.5.3v1",
+      "title": "An admin consent workflow SHALL be configured",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.entra.authorizationpolicy"
+      ],
+      "guidance": "Users SHALL be able to request admin consent. Admin consent workflow SHALL be configured with designated reviewers.",
+      "nistMapping": "CM-4",
+      "mitreMapping": [
+        "T1098"
+      ]
+    },
+    {
+      "id": "MS.AAD.8.1v1",
+      "title": "Guest users SHOULD have limited access to directory objects",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.authorizationpolicy"
+      ],
+      "guidance": "Guest user access should be set to 'Limited access' or 'Most restrictive'. Monitor the AuthorizationPolicy GuestUserRoleId property for changes.",
+      "nistMapping": "AC-6",
+      "mitreMapping": [
+        "T1087"
+      ]
+    },
+    {
+      "id": "MS.AAD.8.2v1",
+      "title": "Only users with Guest Inviter role SHOULD be able to invite guests",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.authorizationpolicy"
+      ],
+      "guidance": "Under External collaboration settings, Guest invite settings should be 'Only users assigned to specific admin roles can invite guest users'.",
+      "nistMapping": "AC-6(10)",
+      "mitreMapping": [
+        "T1098"
+      ]
+    },
+    {
+      "id": "MS.AAD.8.3v1",
+      "title": "Guest invites SHOULD only be allowed to specific authorized domains",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.entra.crosstenantaccesspolicy",
+        "microsoft.entra.crosstenantaccesspolicyconfigurationpartner"
+      ],
+      "guidance": "Collaboration restrictions should allow invitations only to specified domains. Monitor cross-tenant access policy for unauthorized domain additions.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1078"
+      ]
+    }
+  ]
+}

@@ -60,6 +60,8 @@
         'Start-TCMMonitoring'
         'Show-TCMDrift'
         'Update-TCMBaseline'
+        # Scheduling & Notifications
+        'Register-TCMSchedule'
     )
 
     # Cmdlets to export from this module

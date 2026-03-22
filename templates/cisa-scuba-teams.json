@@ -1,0 +1,146 @@
+{
+  "metadata": {
+    "standard": "CISA-SCuBA",
+    "version": "2024.03",
+    "category": "Microsoft Teams",
+    "displayName": "CISA SCuBA - Microsoft Teams",
+    "description": "TCM monitoring template aligned with CISA SCuBA baseline for Microsoft Teams. Covers external access, meeting policies, and messaging policies.",
+    "url": "https://github.com/cisagov/ScubaGear/blob/main/PowerShell/ScubaGear/baselines/teams.md",
+    "license": "Portions adapted from CISA SCuBA SCBs (TLP:CLEAR). See URL for full license terms."
+  },
+  "resourceTypes": [
+    "microsoft.teams.federationconfiguration",
+    "microsoft.teams.meetingpolicy",
+    "microsoft.teams.messagingpolicy",
+    "microsoft.teams.apppermissionpolicy",
+    "microsoft.teams.meetingconfiguration"
+  ],
+  "controls": [
+    {
+      "id": "MS.TEAMS.1.1v1",
+      "title": "External access for Teams and Skype users SHALL only be enabled on a per-domain basis",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.teams.federationconfiguration"
+      ],
+      "guidance": "External access (federation) SHALL be restricted to specific allowed domains rather than open to all. TCM monitors FederationConfiguration for drift that may re-open federation.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.1.2v1",
+      "title": "External access SHALL be restricted to only authorized domains",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.teams.federationconfiguration"
+      ],
+      "guidance": "The allowed external domain list SHALL contain only agency-approved domains. TCM monitors for unauthorized domain additions to federation settings.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.1.3v1",
+      "title": "Unmanaged users SHALL NOT be enabled to initiate contact",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.teams.federationconfiguration"
+      ],
+      "guidance": "Contact with unmanaged (non-organizational) Teams users SHALL be disabled. TCM monitors FederationConfiguration for changes to unmanaged user access.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.1.4v1",
+      "title": "Internal users SHOULD NOT be able to chat with Skype users",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.teams.federationconfiguration"
+      ],
+      "guidance": "Skype interop SHOULD be disabled as Skype consumer is being retired. TCM monitors FederationConfiguration for Skype access changes.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.2.1v1",
+      "title": "Anonymous users SHALL NOT be enabled to start meetings",
+      "severity": "SHALL",
+      "bod2501": true,
+      "resourceTypes": [
+        "microsoft.teams.meetingpolicy"
+      ],
+      "guidance": "Meeting policies SHALL prevent anonymous users from starting meetings. TCM monitors MeetingPolicy for drift on anonymous user settings.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.2.2v1",
+      "title": "Anonymous users SHOULD NOT be admitted automatically to meetings",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.teams.meetingpolicy"
+      ],
+      "guidance": "Lobby settings SHOULD require anonymous users to wait. TCM monitors MeetingPolicy AutoAdmittedUsers property for drift.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.2.3v1",
+      "title": "External participants SHOULD NOT be given control in meetings",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.teams.meetingpolicy"
+      ],
+      "guidance": "Meeting policies SHOULD prevent external participants from sharing their screen or requesting control. TCM monitors MeetingPolicy for screen sharing and control settings.",
+      "nistMapping": "AC-3",
+      "mitreMapping": [
+        "T1567"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.4.1v1",
+      "title": "Only approved apps SHOULD be allowed in Teams",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.teams.apppermissionpolicy"
+      ],
+      "guidance": "App permission policies SHOULD restrict which apps can be installed. TCM monitors AppPermissionPolicy for drift that may allow unauthorized apps.",
+      "nistMapping": "CM-7, CM-11",
+      "mitreMapping": [
+        "T1195"
+      ]
+    },
+    {
+      "id": "MS.TEAMS.6.1v1",
+      "title": "Users SHOULD be able to report security concerns in Teams",
+      "severity": "SHOULD",
+      "bod2501": false,
+      "resourceTypes": [
+        "microsoft.teams.messagingpolicy"
+      ],
+      "guidance": "Messaging policies SHOULD enable reporting of suspicious messages. TCM monitors MessagingPolicy for drift on reporting settings.",
+      "nistMapping": "SI-5",
+      "mitreMapping": [
+        "T1566"
+      ]
+    }
+  ]
+}

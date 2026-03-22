@@ -32,6 +32,7 @@ TestResults/
 # Private drafts
 linkedin-*.md
 *-DRAFT.md
+docs/LAUNCH-KIT.md
 
 # Session memory (private)
 Session_starter.md

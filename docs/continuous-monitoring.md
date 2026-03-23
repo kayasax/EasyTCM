@@ -323,81 +323,76 @@ else {
 
 ---
 
-### Option 3: GitHub Actions (CI/CD Gate)
+### Option 3: GitHub Actions + Maester (Recommended)
 
-Block deployments or raise alerts when drift exists.
+The most complete approach: Maester's 400+ security checks **plus** TCM property-level drift detection in a single daily CI pipeline. OIDC-based — no certificate management.
 
-```yaml
-# .github/workflows/drift-check.yml
-name: M365 Drift Check
-on:
-  schedule:
-    - cron: '0 8 * * *'     # Daily at 8 AM UTC
-  workflow_dispatch:          # Manual trigger
+**What you get:**
+- An HTML report every morning with both security compliance and drift status
+- Property-level diffs: which resource, which property, expected vs. actual value
+- Optional baseline comparison to catch new/deleted (untracked) resources
+- Report artifact downloadable from the Actions tab
 
-jobs:
-  check-drift:
-    runs-on: windows-latest
-    steps:
-      - name: Install modules
-        shell: pwsh
-        run: |
-          Install-Module Microsoft.Graph.Authentication -Force -Scope CurrentUser
-          Install-Module EasyTCM -Force -Scope CurrentUser
+**Quick setup with our automated script:**
 
-      - name: Check for drift
-        shell: pwsh
-        env:
-          APP_CLIENT_ID: ${{ secrets.APP_CLIENT_ID }}
-          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
-          CERT_THUMBPRINT: ${{ secrets.APP_CERT_THUMBPRINT }}
-        run: |
-          Connect-MgGraph -ClientId $env:APP_CLIENT_ID `
-                          -TenantId $env:AZURE_TENANT_ID `
-                          -CertificateThumbprint $env:CERT_THUMBPRINT `
-                          -NoWelcome
-
-          Import-Module EasyTCM
-          $drifts = Show-TCMDrift -PassThru
-
-          if ($drifts.Count -gt 0) {
-            foreach ($d in $drifts) {
-              Write-Output "::error::$($d.ResourceType) - $($d.ResourceDisplay): $($d.DriftedPropertyCount) changed properties"
-            }
-            exit 1
-          }
-          Write-Output "✅ No active drift"
-
-      - name: Upload report on failure
-        if: failure()
-        shell: pwsh
-        run: |
-          Import-Module EasyTCM
-          Show-TCMDrift -Report
-
-      - uses: actions/upload-artifact@v4
-        if: failure()
-        with:
-          name: drift-report
-          path: EasyTCM-Report*.html
+```powershell
+# One command — creates Entra app, grants 19 permissions, configures OIDC, sets GitHub secrets
+.\scripts\New-MaesterServicePrincipal.ps1 -IncludeTCM
 ```
+
+Then copy the workflows from `EasyTCM/.github/workflows/` to your repo.
+
+**Two workflows available:**
+
+| Workflow | What It Does |
+|----------|-------------|
+| [`maester.yml`](https://github.com/kayasax/EasyTCM/blob/master/.github/workflows/maester.yml) | Vanilla Maester using the official `maester365/maester-action` |
+| [`maester-tcm.yml`](https://github.com/kayasax/EasyTCM/blob/master/.github/workflows/maester-tcm.yml) | Maester + TCM drift detection with OIDC token exchange |
+
+The `maester-tcm.yml` workflow:
+1. Exchanges the GitHub OIDC token for a Graph access token (no secrets to rotate)
+2. Runs `Sync-TCMDriftToMaester` to generate drift test files
+3. Runs `Invoke-Maester -NonInteractive` — drift results appear alongside built-in checks
+4. Uploads the HTML report as an artifact (30-day retention)
+
+Trigger a baseline comparison manually from the Actions UI with the **"Also detect new/deleted resources"** checkbox, or via CLI:
+
+```bash
+gh workflow run maester-tcm.yml -f compare_baseline=true
+```
+
+**Full setup guide:** [GitHub Actions Integration →](github-actions)
 
 ---
 
-### Option 4: Add Drift to Existing Maester Automation
+### Option 4: Add Drift to an Existing Maester Pipeline
 
-If you already run Maester on a schedule (Automation, GitHub Actions, etc.), just add two lines before `Invoke-Maester`:
+If you **already** run Maester on a schedule (GitHub Actions, Azure DevOps, etc.), adding TCM drift detection takes three lines — no separate workflow needed:
 
 ```powershell
-# Add to your existing Maester automation script:
+# Add before your existing Invoke-Maester call:
+Install-Module EasyTCM -Force -Scope CurrentUser
 Import-Module EasyTCM
-Sync-TCMDriftToMaester    # generates drift tests in your Maester folder
+Sync-TCMDriftToMaester     # Materializes drift data as Pester test files
 
-# Then run Maester as usual — drift results appear alongside 400+ security checks
-Invoke-Maester -OutputHtmlFile 'MaesterReport.html'
+# Your existing Maester call — drift tests are automatically discovered
+Invoke-Maester -NonInteractive -OutputHtmlFile 'MaesterReport.html'
 ```
 
-No separate automation needed — drift checks ride along with your existing Maester pipeline.
+The generated test produces a property-level diff table in the Maester HTML report:
+
+| | Resource | Expected | Current |
+|---|----------|----------|---------|
+| ⚠️ | EXOHostedContentFilterPolicy-Default | **AllowedSenderDomains**: *(empty)* | `badactors.io` |
+| ⚠️ | AADConditionalAccessPolicy-Block risky... | **ExcludeUsers**: `admin@contoso.com` | `["admin@contoso.com","rogue@contoso.com"]` |
+
+Add `-CompareBaseline` to also catch new/deleted resources (takes a snapshot, uses API quota):
+
+```powershell
+Sync-TCMDriftToMaester -CompareBaseline
+```
+
+> **Pre-requisite:** Your pipeline's service principal needs `ConfigurationMonitoring.ReadWrite.All` in addition to Maester's standard permissions. And TCM must be initialized once (`Initialize-TCM` or `Start-TCMMonitoring`).
 
 ---
 
@@ -407,10 +402,10 @@ No separate automation needed — drift checks ride along with your existing Mae
 |----------|----------|----------|
 | **Task Scheduler** | Single admin, jump server | Windows machine, cert auth |
 | **Azure Automation** | Production, no servers | Azure subscription, managed identity |
-| **GitHub Actions** | DevOps teams, CI/CD gates | GitHub repo, cert in secrets |
-| **Maester pipeline** | Already running Maester | Your existing Maester setup |
+| **GitHub Actions + Maester** | DevOps teams, full visibility | GitHub repo, OIDC (no secrets to rotate) |
+| **Existing Maester pipeline** | Already running Maester anywhere | `Install-Module EasyTCM` + 3 lines of code |
 
-> All automated approaches require **certificate-based or managed identity authentication**. Interactive login won't work in unattended scenarios.
+> **Task Scheduler and Azure Automation** require certificate-based or managed identity auth. **GitHub Actions** uses OIDC — no secrets to manage. All approaches require `ConfigurationMonitoring.ReadWrite.All` for TCM.
 
 ---
 

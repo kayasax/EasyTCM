@@ -163,6 +163,10 @@ Turn TCM's server-side monitoring into Maester test results — the bridge both 
 
 The complete lifecycle: setup, daily checks, rebaselining, and automation.
 
+## [GitHub Actions →](github-actions)
+
+Ready-to-use workflows: vanilla Maester (Phase 1) and Maester + TCM drift detection (Phase 2) — add one file, get continuous monitoring.
+
 ## [Cmdlet Reference →](https://github.com/kayasax/EasyTCM#-cmdlets--v020-15-shipped)
 
 All 19 cmdlets with examples and parameter documentation.

@@ -189,8 +189,33 @@ Install-Module EasyTCM -Scope CurrentUser
 | **[📖 Full Documentation](https://kayasax.github.io/EasyTCM/)** | **The complete story: problem → solution → Maester → automation** |
 | [Maester Integration](https://kayasax.github.io/EasyTCM/maester-integration) | Why & how to combine TCM + Maester for unified security reporting |
 | [Continuous Monitoring & Automation](https://kayasax.github.io/EasyTCM/continuous-monitoring) | Daily checks → rebaselining → Task Scheduler / Azure Automation / GitHub Actions |
+| [GitHub Actions Workflows](https://kayasax.github.io/EasyTCM/github-actions) | Ready-to-use Maester + TCM drift detection workflows — setup guide |
 | [Getting Started (Advanced)](docs/GETTING-STARTED.md) | Step-by-step guide with granular control over each cmdlet |
 | [Changelog](CHANGELOG.md) | Version history |
+
+---
+
+## ⚙️ GitHub Actions
+
+Two ready-to-use workflows live in [`.github/workflows/`](.github/workflows/):
+
+| Workflow | What it does |
+|----------|-------------|
+| [`maester.yml`](.github/workflows/maester.yml) | **Vanilla Maester** — 400+ daily M365 security checks, HTML report artifact |
+| [`maester-tcm.yml`](.github/workflows/maester-tcm.yml) | **Maester + TCM** — security checks AND drift detection in one report |
+
+```yaml
+# Add to your repo — that's it.
+# Runs daily at 06:00 UTC and on manual trigger.
+on:
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+```
+
+Drift = failing Pester test = workflow failure = **free alerting via GitHub notifications**.
+
+See the **[full setup guide](https://kayasax.github.io/EasyTCM/github-actions)** for app registration, permissions, OIDC vs client-secret auth, and troubleshooting.
 
 ---
 

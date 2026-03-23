@@ -431,3 +431,4 @@ No separate automation needed — drift checks ride along with your existing Mae
 
 ## [← Maester Integration](maester-integration)
 ## [← Back to Home](.)
+## [GitHub Actions →](github-actions)

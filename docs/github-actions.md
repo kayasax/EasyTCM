@@ -227,13 +227,24 @@ Start-TCMMonitoring -Profile Recommended
 
 ### Add baseline comparison (detect new/deleted resources)
 
-TCM drift only detects **property changes** on resources already in the baseline. To also catch new CA policies or deleted transport rules, add `-CompareBaseline`:
+TCM drift only detects **property changes** on resources already in the baseline. To also catch new CA policies or deleted transport rules, use `-CompareBaseline`:
 
 ```powershell
+# Interactively
 Show-TCMDrift -Maester -CompareBaseline
 ```
 
+**In GitHub Actions**, the `maester-tcm.yml` workflow exposes this as a manual input. Click **Run workflow** in the Actions UI and check **"Also detect new/deleted resources"**. Alternatively, trigger it via the API:
+
+```bash
+gh workflow run maester-tcm.yml -f compare_baseline=true
+```
+
 > ⚠️ `-CompareBaseline` takes a fresh snapshot (counts against your daily quota). Use it no more than once per day.
+
+### Property-level drift details
+
+The Maester HTML report shows exactly **which properties** drifted and the expected vs. actual values — not just "this resource changed". This makes it easy to pinpoint what was modified without opening the admin portal.
 
 ---
 

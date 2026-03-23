@@ -3,7 +3,13 @@ name: Maester + TCM — M365 Security & Drift Monitoring
 on:
   schedule:
     - cron: '0 6 * * *'   # Daily at 06:00 UTC
-  workflow_dispatch:        # Manual trigger from Actions UI
+  workflow_dispatch:
+    inputs:
+      compare_baseline:
+        description: 'Also detect new/deleted resources (takes a snapshot, uses API quota)'
+        required: false
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -105,7 +111,12 @@ jobs:
           # Sync drift data into the Maester folder.
           # Show-TCMDrift -Maester calls Sync-TCMDriftToMaester internally and
           # writes TCM-Drift.Tests.ps1 + JSON files to $env:MAESTER_TESTS_PATH/Drift/.
-          Show-TCMDrift -Maester
+          $syncParams = @{}
+          if ('${{ github.event.inputs.compare_baseline }}' -eq 'true') {
+              $syncParams.CompareBaseline = $true
+              Write-Host '🔍 Baseline comparison enabled — taking a fresh snapshot...'
+          }
+          Sync-TCMDriftToMaester @syncParams
 
       # ── Run Maester (includes drift tests + 400+ security checks) ─────────
       - name: Run Maester security checks (+ TCM drift)
@@ -118,7 +129,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
 
           Set-Location $testsPath
-          Invoke-Maester -OutputHtmlFile "$reportPath/MaesterReport.html" `
+          Invoke-Maester -NonInteractive `
+                         -OutputHtmlFile "$reportPath/MaesterReport.html" `
                          -OutputJsonFile "$reportPath/MaesterReport.json"
 
       # ── Artifacts ────────────────────────────────────────────────────────

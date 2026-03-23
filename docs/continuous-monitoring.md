@@ -333,35 +333,16 @@ The most complete approach: Maester's 400+ security checks **plus** TCM property
 - Optional baseline comparison to catch new/deleted (untracked) resources
 - Report artifact downloadable from the Actions tab
 
-**Quick setup with our automated script:**
+**Quick setup:**
 
 ```powershell
 # One command — creates Entra app, grants 19 permissions, configures OIDC, sets GitHub secrets
 .\scripts\New-MaesterServicePrincipal.ps1 -IncludeTCM
 ```
 
-Then copy the workflows from `EasyTCM/.github/workflows/` to your repo.
+Then copy the workflows to your repo and trigger. The `maester-tcm.yml` workflow handles OIDC token exchange, `Sync-TCMDriftToMaester`, and `Invoke-Maester -NonInteractive` — property-level drift results appear in the Maester HTML report alongside 400+ built-in checks.
 
-**Two workflows available:**
-
-| Workflow | What It Does |
-|----------|-------------|
-| [`maester.yml`](https://github.com/kayasax/EasyTCM/blob/master/.github/workflows/maester.yml) | Vanilla Maester using the official `maester365/maester-action` |
-| [`maester-tcm.yml`](https://github.com/kayasax/EasyTCM/blob/master/.github/workflows/maester-tcm.yml) | Maester + TCM drift detection with OIDC token exchange |
-
-The `maester-tcm.yml` workflow:
-1. Exchanges the GitHub OIDC token for a Graph access token (no secrets to rotate)
-2. Runs `Sync-TCMDriftToMaester` to generate drift test files
-3. Runs `Invoke-Maester -NonInteractive` — drift results appear alongside built-in checks
-4. Uploads the HTML report as an artifact (30-day retention)
-
-Trigger a baseline comparison manually from the Actions UI with the **"Also detect new/deleted resources"** checkbox, or via CLI:
-
-```bash
-gh workflow run maester-tcm.yml -f compare_baseline=true
-```
-
-**Full setup guide:** [GitHub Actions Integration →](github-actions)
+**Step-by-step setup (Entra app, permissions, secrets, workflow files):** [GitHub Actions Guide →](github-actions)
 
 ---
 

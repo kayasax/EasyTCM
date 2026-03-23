@@ -7,6 +7,8 @@ title: "GitHub Actions — Maester + TCM Continuous Monitoring"
 
 **Automated daily M365 security checks (Maester) and drift detection (EasyTCM) — unified HTML report, zero servers.**
 
+> This guide covers the GitHub Actions approach in detail. For other automation options (Windows Task Scheduler, Azure Automation, or injecting drift into an existing Maester pipeline), see the [Continuous Monitoring Guide](continuous-monitoring).
+
 Two workflows are provided in `.github/workflows/`:
 
 | Workflow | Purpose |

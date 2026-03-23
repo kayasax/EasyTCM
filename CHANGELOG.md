@@ -5,6 +5,27 @@ All notable changes to EasyTCM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-03-23
+
+### Fixed
+- Maester HTML report table layout — compact 4-column format (was 5 columns breaking CSS)
+- Resource names: show display name only, strip `resourceType::` prefix (truncated at 60 chars)
+- Merged Property into Expected column as **PropertyName**: `value` for readability
+- Emoji status icons (⚠️/➕/❌) instead of verbose `[CHANGED]`/`[NEW]`/`[DELETED]` tags
+- Value truncation tightened to 80 chars
+
+## [0.4.0] - 2026-03-23
+
+### Added
+- **Property-level drift detail in Maester report** — MT.1060 test now shows exactly which properties changed with expected vs. actual values, not just "this resource changed"
+- **`scripts/New-MaesterServicePrincipal.ps1`** — Automated setup script for GitHub Actions: Entra app registration, 19 Graph permissions, federated identity credential, GitHub secrets — zero required parameters, auto-detects repo
+- **`-CompareBaseline` workflow input** — `maester-tcm.yml` now has a `workflow_dispatch` input to opt-in to new/deleted resource detection (checkbox in Actions UI or `gh workflow run -f compare_baseline=true`)
+- **`docs/github-actions.md`** — Full setup guide: prerequisites, OIDC configuration, Phase 1 (vanilla Maester), Phase 2 (Maester + TCM), customization, troubleshooting
+
+### Fixed
+- Added `-NonInteractive` to `Invoke-Maester` in CI workflows (prevents `xdg-open` crash on ubuntu runners)
+- `maester-tcm.yml` workflow: uses `Sync-TCMDriftToMaester` directly instead of `Show-TCMDrift -Maester` (CI-friendly, no browser popup)
+
 ## [0.3.1] - 2026-03-20
 
 ### Changed

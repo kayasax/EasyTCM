@@ -1,0 +1,90 @@
+name: Maester — M365 Security Checks
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily at 06:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions UI
+
+permissions:
+  contents: read
+  id-token: write           # Required for OIDC workload identity federation
+
+jobs:
+  maester:
+    name: Run Maester Security Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Authentication ────────────────────────────────────────────────────
+      # Preferred: workload identity federation (no secret rotation required).
+      # Falls back to client-secret when AZURE_CLIENT_SECRET is set.
+      - name: Authenticate to Microsoft Graph (OIDC)
+        if: vars.USE_CLIENT_SECRET != 'true'
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+          Connect-MgGraph -ClientId $env:AZURE_CLIENT_ID `
+                          -TenantId $env:AZURE_TENANT_ID `
+                          -FederatedToken (
+                              Invoke-RestMethod `
+                                  -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" `
+                                  -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+                          ).value `
+                          -NoWelcome
+
+      - name: Authenticate to Microsoft Graph (client secret)
+        if: vars.USE_CLIENT_SECRET == 'true'
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+          $secureSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
+          $credential   = New-Object System.Management.Automation.PSCredential($env:AZURE_CLIENT_ID, $secureSecret)
+          Connect-MgGraph -TenantId $env:AZURE_TENANT_ID `
+                          -ClientSecretCredential $credential `
+                          -NoWelcome
+
+      # ── Maester setup ────────────────────────────────────────────────────
+      - name: Install Maester
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Maester -Force -Scope CurrentUser
+
+      - name: Set up Maester tests folder
+        shell: pwsh
+        run: |
+          $testsPath = '${{ runner.temp }}/maester-tests'
+          New-Item -ItemType Directory -Force -Path $testsPath | Out-Null
+          Set-Location $testsPath
+          Install-MaesterTests
+
+      # ── Run Maester ──────────────────────────────────────────────────────
+      - name: Run Maester security checks
+        shell: pwsh
+        run: |
+          $testsPath  = '${{ runner.temp }}/maester-tests'
+          $reportPath = '${{ runner.temp }}/maester-report'
+          New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
+
+          Set-Location $testsPath
+          Invoke-Maester -OutputHtmlFile "$reportPath/MaesterReport.html" `
+                         -OutputJsonFile "$reportPath/MaesterReport.json"
+
+      # ── Artifacts ────────────────────────────────────────────────────────
+      - name: Upload Maester HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maester-report
+          path: ${{ runner.temp }}/maester-report/
+          retention-days: 30

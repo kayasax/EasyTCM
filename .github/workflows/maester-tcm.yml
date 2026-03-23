@@ -1,0 +1,131 @@
+name: Maester + TCM — M365 Security & Drift Monitoring
+
+on:
+  schedule:
+    - cron: '0 6 * * *'   # Daily at 06:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions UI
+
+permissions:
+  contents: read
+  id-token: write           # Required for OIDC workload identity federation
+
+jobs:
+  maester-tcm:
+    name: Run Maester + TCM Drift Detection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── Authentication ────────────────────────────────────────────────────
+      # Preferred: workload identity federation (no secret rotation required).
+      # Falls back to client-secret when AZURE_CLIENT_SECRET is set.
+      #
+      # Required Graph app roles (in addition to Maester's standard permissions):
+      #   ConfigurationMonitoring.ReadWrite.All
+      #   Policy.Read.All
+      #   Directory.Read.All
+      #
+      # The first run also needs the following to provision the TCM service
+      # principal (Initialize-TCM / Start-TCMMonitoring does this once):
+      #   Application.ReadWrite.All   (or run Initialize-TCM manually)
+      - name: Authenticate to Microsoft Graph (OIDC)
+        if: vars.USE_CLIENT_SECRET != 'true'
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+        run: |
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+          Connect-MgGraph -ClientId $env:AZURE_CLIENT_ID `
+                          -TenantId $env:AZURE_TENANT_ID `
+                          -FederatedToken (
+                              Invoke-RestMethod `
+                                  -Uri "$env:ACTIONS_ID_TOKEN_REQUEST_URL&audience=api://AzureADTokenExchange" `
+                                  -Headers @{ Authorization = "Bearer $env:ACTIONS_ID_TOKEN_REQUEST_TOKEN" }
+                          ).value `
+                          -NoWelcome
+
+      - name: Authenticate to Microsoft Graph (client secret)
+        if: vars.USE_CLIENT_SECRET == 'true'
+        shell: pwsh
+        env:
+          AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+          AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+          AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+        run: |
+          Install-Module -Name Microsoft.Graph.Authentication -Force -Scope CurrentUser -SkipPublisherCheck
+          $secureSecret = ConvertTo-SecureString $env:AZURE_CLIENT_SECRET -AsPlainText -Force
+          $credential   = New-Object System.Management.Automation.PSCredential($env:AZURE_CLIENT_ID, $secureSecret)
+          Connect-MgGraph -TenantId $env:AZURE_TENANT_ID `
+                          -ClientSecretCredential $credential `
+                          -NoWelcome
+
+      # ── Maester setup ────────────────────────────────────────────────────
+      - name: Install Maester and EasyTCM
+        shell: pwsh
+        run: |
+          Set-PSRepository PSGallery -InstallationPolicy Trusted
+          Install-Module -Name Maester  -Force -Scope CurrentUser
+          Install-Module -Name EasyTCM  -Force -Scope CurrentUser
+
+      - name: Set up Maester tests folder
+        shell: pwsh
+        run: |
+          $testsPath = '${{ runner.temp }}/maester-tests'
+          New-Item -ItemType Directory -Force -Path $testsPath | Out-Null
+          Set-Location $testsPath
+          Install-MaesterTests
+          # Tell EasyTCM where the Maester tests live (used by Sync-TCMDriftToMaester)
+          $env:MAESTER_TESTS_PATH = $testsPath
+
+      # ── TCM drift detection (runs BEFORE Invoke-Maester) ─────────────────
+      # This injects drift results into the Maester tests folder so that
+      # Invoke-Maester picks them up and includes them in the HTML report.
+      - name: Sync TCM drift to Maester
+        shell: pwsh
+        env:
+          MAESTER_TESTS_PATH: ${{ runner.temp }}/maester-tests
+        run: |
+          Import-Module EasyTCM
+
+          # Verify that TCM prerequisites are in place before continuing.
+          # A failed health-check surfaces a clear error rather than silent
+          # "no drift" results caused by missing permissions.
+          try {
+              Test-TCMConnection -ErrorAction Stop
+          }
+          catch {
+              Write-Warning "TCM health-check failed: $_"
+              Write-Warning "Ensure the app registration has ConfigurationMonitoring.ReadWrite.All and the TCM service principal is provisioned (run Initialize-TCM once interactively)."
+              exit 1
+          }
+
+          # Sync drift data into the Maester folder.
+          # Show-TCMDrift -Maester calls Sync-TCMDriftToMaester internally and
+          # writes TCM-Drift.Tests.ps1 + JSON files to $env:MAESTER_TESTS_PATH/Drift/.
+          Show-TCMDrift -Maester
+
+      # ── Run Maester (includes drift tests + 400+ security checks) ─────────
+      - name: Run Maester security checks (+ TCM drift)
+        shell: pwsh
+        env:
+          MAESTER_TESTS_PATH: ${{ runner.temp }}/maester-tests
+        run: |
+          $testsPath  = '${{ runner.temp }}/maester-tests'
+          $reportPath = '${{ runner.temp }}/maester-report'
+          New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
+
+          Set-Location $testsPath
+          Invoke-Maester -OutputHtmlFile "$reportPath/MaesterReport.html" `
+                         -OutputJsonFile "$reportPath/MaesterReport.json"
+
+      # ── Artifacts ────────────────────────────────────────────────────────
+      - name: Upload Maester HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: maester-tcm-report
+          path: ${{ runner.temp }}/maester-report/
+          retention-days: 30

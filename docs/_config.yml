@@ -6,3 +6,13 @@ remote_theme: pages-themes/minimal@v0.2.0
 plugins:
   - jekyll-remote-theme
   - jekyll-seo-tag
+
+nav:
+  - title: Home
+    url: /EasyTCM/
+  - title: Maester Integration
+    url: /EasyTCM/maester-integration
+  - title: Continuous Monitoring
+    url: /EasyTCM/continuous-monitoring
+  - title: GitHub Actions
+    url: /EasyTCM/github-actions

@@ -197,4 +197,5 @@ The Maester community spent months debating where to store drift baselines (loca
 ---
 
 ## [← Back to Home](.)
+## [GitHub Actions →](github-actions)
 ## [Continuous Monitoring →](continuous-monitoring)

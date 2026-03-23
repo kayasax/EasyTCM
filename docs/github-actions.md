@@ -28,24 +28,29 @@ Create one app registration that both workflows share. It needs the Microsoft Gr
 
 These are the same permissions Maester's official documentation requires:
 
-| Permission | Type | Why |
-|-----------|------|-----|
-| `Policy.Read.All` | Application | Read Conditional Access policies |
-| `Directory.Read.All` | Application | Read Entra directory objects |
-| `IdentityRiskEvent.Read.All` | Application | Read risk events |
-| `AuditLog.Read.All` | Application | Read audit logs |
-| `Reports.Read.All` | Application | Read usage reports |
-| `SecurityEvents.Read.All` | Application | Read security events |
-| `User.Read.All` | Application | Read user profiles |
-| `GroupMember.Read.All` | Application | Read group memberships |
-| `RoleManagement.Read.All` | Application | Read role assignments |
-| `PrivilegedAccess.Read.AzureAD` | Application | Read PIM assignments |
-| `PrivilegedEligibilitySchedule.Read.AzureADGroup` | Application | Read group PIM schedules |
-| `Organization.Read.All` | Application | Read tenant details |
-| `CrossTenantInformation.ReadBasic.All` | Application | Read cross-tenant settings |
-| `SharePointTenantSettings.Read.All` | Application | Read SharePoint settings |
+| Permission | Type |
+|-----------|------|
+| `DeviceManagementConfiguration.Read.All` | Application |
+| `DeviceManagementManagedDevices.Read.All` | Application |
+| `DeviceManagementRBAC.Read.All` | Application |
+| `Directory.Read.All` | Application |
+| `DirectoryRecommendations.Read.All` | Application |
+| `IdentityRiskEvent.Read.All` | Application |
+| `OnPremDirectorySynchronization.Read.All` | Application |
+| `Policy.Read.All` | Application |
+| `Policy.Read.ConditionalAccess` | Application |
+| `PrivilegedAccess.Read.AzureAD` | Application |
+| `Reports.Read.All` | Application |
+| `ReportSettings.Read.All` | Application |
+| `RoleEligibilitySchedule.Read.Directory` | Application |
+| `RoleManagement.Read.All` | Application |
+| `SecurityIdentitiesSensors.Read.All` | Application |
+| `SecurityIdentitiesHealth.Read.All` | Application |
+| `SharePointTenantSettings.Read.All` | Application |
+| `ThreatHunting.Read.All` | Application |
+| `UserAuthenticationMethod.Read.All` | Application |
 
-> For the full, up-to-date Maester permission list see [maester.dev/docs/installation](https://maester.dev/docs/installation).
+> For the full, up-to-date Maester permission list see [maester.dev/docs/monitoring/github](https://maester.dev/docs/monitoring/github).
 
 #### Additional permissions for TCM (Phase 2 only)
 
@@ -156,14 +161,13 @@ This extends Phase 1 with a **TCM drift step** that runs before `Invoke-Maester`
 - name: Sync TCM drift to Maester
   shell: pwsh
   env:
-    MAESTER_TESTS_PATH: ${{ runner.temp }}/maester-tests
+    MAESTER_TESTS_PATH: ${{ github.workspace }}
   run: |
     Import-Module EasyTCM
-    Test-TCMConnection -ErrorAction Stop   # health-check
-    Show-TCMDrift -Maester                 # inject drift tests
+    Sync-TCMDriftToMaester   # inject drift test files
 ```
 
-`Show-TCMDrift -Maester` calls `Sync-TCMDriftToMaester` which writes:
+`Sync-TCMDriftToMaester` writes:
 
 ```
 maester-tests/
@@ -281,5 +285,25 @@ GitHub's native notifications handle alerting when the workflow fails. To add ex
 
 ---
 
+## Automated Setup Script
+
+Don't want to click through 17 manual steps? The [`New-MaesterServicePrincipal.ps1`](https://github.com/kayasax/EasyTCM/blob/main/scripts/New-MaesterServicePrincipal.ps1) script automates the entire setup:
+
+```powershell
+# Zero parameters — auto-detects repo from git remote, uses sensible defaults
+.\scripts\New-MaesterServicePrincipal.ps1
+
+# Override app name and include TCM permissions
+.\scripts\New-MaesterServicePrincipal.ps1 -DisplayName "Contoso Maester" -IncludeTCM
+
+# Include Exchange + Teams permissions for full CISA coverage
+.\scripts\New-MaesterServicePrincipal.ps1 -IncludeExchange -IncludeTeams -IncludeTCM
+```
+
+The script creates the app registration, grants all permissions with admin consent, adds the federated identity credential, and sets the GitHub secrets — all in one command.
+
+---
+
 ## [← Continuous Monitoring Guide](continuous-monitoring)
+## [← Maester Integration](maester-integration)
 ## [← Back to Home](.)

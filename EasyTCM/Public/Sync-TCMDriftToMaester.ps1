@@ -224,8 +224,12 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
 
         `$drifted = [System.Collections.Generic.List[string]]::new()
         foreach (`$key in @(@(`$baseline.Keys) + @(`$current.Keys) | Select-Object -Unique)) {
-            if (-not `$baseline.ContainsKey(`$key)) { `$drifted.Add(('| ``[NEW]`` | ``{0}`` | — | — | — |' -f `$key)); continue }
-            if (-not `$current.ContainsKey(`$key))  { `$drifted.Add(('| ``[DELETED]`` | ``{0}`` | — | — | — |' -f `$key)); continue }
+            # Extract short display name from "resourceType::displayName" key
+            `$displayName = if (`$key -match '::(.+)$') { `$Matches[1] } else { `$key }
+            if (`$displayName.Length -gt 60) { `$displayName = `$displayName.Substring(0,57) + '...' }
+
+            if (-not `$baseline.ContainsKey(`$key)) { `$drifted.Add(('| ➕ NEW | {0} | — | — |' -f `$displayName)); continue }
+            if (-not `$current.ContainsKey(`$key))  { `$drifted.Add(('| ❌ DEL | {0} | — | — |' -f `$displayName)); continue }
 
             # Property-level comparison: show exactly what changed
             `$bProps = if (`$baseline[`$key] -is [System.Collections.IDictionary]) { `$baseline[`$key]['properties'] } else { `$baseline[`$key].properties }
@@ -233,7 +237,7 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
             if (`$null -eq `$bProps -or `$null -eq `$cProps) {
                 `$bJson = `$baseline[`$key] | ConvertTo-Json -Depth 20 -Compress
                 `$cJson = `$current[`$key]  | ConvertTo-Json -Depth 20 -Compress
-                if (`$bJson -ne `$cJson) { `$drifted.Add(('| ``[CHANGED]`` | ``{0}`` | *(object)* | — | — |' -f `$key)) }
+                if (`$bJson -ne `$cJson) { `$drifted.Add(('| ⚠️ | {0} | *(object)* | — |' -f `$displayName)) }
                 continue
             }
 
@@ -247,13 +251,13 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
             foreach (`$pn in `$allPropNames) {
                 `$bVal = if (`$bProps -is [System.Collections.IDictionary]) { `$bProps[`$pn] } elseif (`$bProps) { `$bProps.`$pn } else { `$null }
                 `$cVal = if (`$cProps -is [System.Collections.IDictionary]) { `$cProps[`$pn] } elseif (`$cProps) { `$cProps.`$pn } else { `$null }
-                `$bStr = if (`$null -eq `$bVal) { '*(absent)*' } elseif (`$bVal -is [System.Collections.IDictionary] -or `$bVal -is [Array]) { (`$bVal | ConvertTo-Json -Depth 10 -Compress) } else { [string]`$bVal }
-                `$cStr = if (`$null -eq `$cVal) { '*(absent)*' } elseif (`$cVal -is [System.Collections.IDictionary] -or `$cVal -is [Array]) { (`$cVal | ConvertTo-Json -Depth 10 -Compress) } else { [string]`$cVal }
+                `$bStr = if (`$null -eq `$bVal) { '*(none)*' } elseif (`$bVal -is [System.Collections.IDictionary] -or `$bVal -is [Array]) { (`$bVal | ConvertTo-Json -Depth 10 -Compress) } else { [string]`$bVal }
+                `$cStr = if (`$null -eq `$cVal) { '*(none)*' } elseif (`$cVal -is [System.Collections.IDictionary] -or `$cVal -is [Array]) { (`$cVal | ConvertTo-Json -Depth 10 -Compress) } else { [string]`$cVal }
                 # Truncate long values so the report stays readable
-                if (`$bStr.Length -gt 120) { `$bStr = `$bStr.Substring(0,117) + '...' }
-                if (`$cStr.Length -gt 120) { `$cStr = `$cStr.Substring(0,117) + '...' }
+                if (`$bStr.Length -gt 80) { `$bStr = `$bStr.Substring(0,77) + '...' }
+                if (`$cStr.Length -gt 80) { `$cStr = `$cStr.Substring(0,77) + '...' }
                 if (`$bStr -ne `$cStr) {
-                    `$drifted.Add(('| ``[CHANGED]`` | ``{0}`` | ``{1}`` | ``{2}`` | ``{3}`` |' -f `$key, `$pn, `$bStr, `$cStr))
+                    `$drifted.Add(('| ⚠️ | {0} | **{1}**: ``{2}`` | ``{3}`` |' -f `$displayName, `$pn, `$bStr, `$cStr))
                 }
             }
         }
@@ -262,7 +266,7 @@ Describe 'MT.1060: TCM Drift - $escapedName' -Tag 'TCM', 'Drift', 'MT.1060' {
         if (`$drifted.Count -eq 0) {
             Add-MtTestResultDetail -Description `$desc -Result "✅ All resources match the TCM baseline."
         } else {
-            `$table = "| Status | Resource | Property | Expected | Current |`n|--------|----------|----------|----------|---------|`n" + (`$drifted -join "`n")
+            `$table = "| | Resource | Expected | Current |`n|---|----------|----------|---------|`n" + (`$drifted -join "`n")
             Add-MtTestResultDetail -Description `$desc -Result `$table
         }
 

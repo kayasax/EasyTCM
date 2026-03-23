@@ -7,7 +7,7 @@
     RootModule        = 'EasyTCM.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.4.0'
+    ModuleVersion     = '0.4.1'
 
     # ID used to uniquely identify this module
     GUID              = 'a3f7c8d2-5e1b-4a9f-b0c6-d8e2f1a4b5c7'
@@ -80,7 +80,7 @@
             Tags         = @('TCM', 'TenantConfiguration', 'Microsoft365', 'Maester', 'Drift', 'ConfigurationManagement', 'MicrosoftGraph')
             LicenseUri   = 'https://github.com/kayasax/EasyTCM/blob/main/LICENSE'
             ProjectUri   = 'https://github.com/kayasax/EasyTCM'
-            ReleaseNotes = 'v0.4.0: Property-level drift detail in Maester report (shows which properties changed, expected vs actual values). GitHub Actions integration: automated setup script (New-MaesterServicePrincipal.ps1), -CompareBaseline workflow input for new/deleted resource detection, -NonInteractive for CI runners. Docs: full GitHub Actions setup guide.'
+            ReleaseNotes = 'v0.4.1: Fixed Maester HTML report table layout — 4-column compact format with short resource names, property+value merged, emoji status icons. Values truncated at 80 chars.'
         }
     }
 }

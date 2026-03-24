@@ -32,54 +32,7 @@ The script will:
 3. Add a federated identity credential (OIDC — no secrets to rotate)
 4. Set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` as GitHub secrets via `gh`
 
-<details>
-<summary><strong>Manual setup (click to expand)</strong> — if you prefer to create the app registration yourself</summary>
-
-### Entra ID App Registration
-
-Create one app registration with these **application permissions**:
-
-| Permission | Type | Required for |
-|-----------|------|-------------|
-| `Directory.Read.All` | Application | Maester |
-| `Policy.Read.All` | Application | Maester |
-| `Policy.Read.ConditionalAccess` | Application | Maester |
-| `Reports.Read.All` | Application | Maester |
-| `RoleManagement.Read.All` | Application | Maester |
-| `UserAuthenticationMethod.Read.All` | Application | Maester |
-| `DeviceManagementConfiguration.Read.All` | Application | Maester |
-| `DeviceManagementManagedDevices.Read.All` | Application | Maester |
-| `DeviceManagementRBAC.Read.All` | Application | Maester |
-| `DirectoryRecommendations.Read.All` | Application | Maester |
-| `IdentityRiskEvent.Read.All` | Application | Maester |
-| `OnPremDirectorySynchronization.Read.All` | Application | Maester |
-| `PrivilegedAccess.Read.AzureAD` | Application | Maester |
-| `ReportSettings.Read.All` | Application | Maester |
-| `RoleEligibilitySchedule.Read.Directory` | Application | Maester |
-| `SecurityIdentitiesSensors.Read.All` | Application | Maester |
-| `SecurityIdentitiesHealth.Read.All` | Application | Maester |
-| `SharePointTenantSettings.Read.All` | Application | Maester |
-| `ThreatHunting.Read.All` | Application | Maester |
-| `ConfigurationMonitoring.ReadWrite.All` | Application | EasyTCM |
-
-> Full Maester permission list: [maester.dev/docs/monitoring/github](https://maester.dev/docs/monitoring/github)
-
-### Workload Identity Federation (OIDC)
-
-1. App registration → **Certificates & secrets** → **Federated credentials** → **Add credential**
-2. Scenario: **GitHub Actions deploying Azure resources**
-3. Organization: `<your-github-org>`, Repository: `<your-repo>`, Entity: `Branch` → `main`
-
-### GitHub Secrets
-
-Repository → **Settings** → **Secrets and variables** → **Actions**:
-
-| Secret | Value |
-|--------|-------|
-| `AZURE_CLIENT_ID` | Application (client) ID |
-| `AZURE_TENANT_ID` | Directory (tenant) ID |
-
-</details>
+> **Prefer manual setup?** Follow the [official Maester guide](https://maester.dev/docs/monitoring/github#set-up-the-github-actions-workflow) for the app registration, then add `ConfigurationMonitoring.ReadWrite.All` for TCM and set `AZURE_CLIENT_ID` + `AZURE_TENANT_ID` as GitHub secrets.
 
 ---
 

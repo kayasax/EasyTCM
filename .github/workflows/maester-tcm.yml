@@ -2,7 +2,8 @@ name: Maester + TCM — M365 Security & Drift Monitoring
 
 on:
   schedule:
-    - cron: '0 6 * * *'   # Daily at 06:00 UTC
+    - cron: '0 6 * * *'   # Daily at 06:00 UTC — property drift only
+    - cron: '0 8 * * 1'   # Monday at 08:00 UTC — + baseline comparison
   workflow_dispatch:
     inputs:
       compare_baseline:
@@ -112,9 +113,12 @@ jobs:
           # Show-TCMDrift -Maester calls Sync-TCMDriftToMaester internally and
           # writes TCM-Drift.Tests.ps1 + JSON files to $env:MAESTER_TESTS_PATH/Drift/.
           $syncParams = @{}
-          if ('${{ github.event.inputs.compare_baseline }}' -eq 'true') {
+          # Enable baseline comparison on manual request OR weekly Monday schedule
+          $isWeekly = '${{ github.event.schedule }}' -eq '0 8 * * 1'
+          if ($isWeekly -or '${{ github.event.inputs.compare_baseline }}' -eq 'true') {
               $syncParams.CompareBaseline = $true
-              Write-Host '🔍 Baseline comparison enabled — taking a fresh snapshot...'
+              $trigger = if ($isWeekly) { 'weekly schedule' } else { 'manual request' }
+              Write-Host "🔍 Baseline comparison enabled ($trigger) — taking a fresh snapshot..."
           }
           Sync-TCMDriftToMaester @syncParams
 

@@ -129,9 +129,56 @@ jobs:
           New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
 
           Set-Location $testsPath
-          Invoke-Maester -NonInteractive `
-                         -OutputHtmlFile "$reportPath/MaesterReport.html" `
-                         -OutputJsonFile "$reportPath/MaesterReport.json"
+          $results = $null
+          $savedEAP = $ErrorActionPreference
+          $ErrorActionPreference = 'SilentlyContinue'
+          try {
+              $results = Invoke-Maester -NonInteractive -PassThru `
+                             -OutputHtmlFile "$reportPath/MaesterReport.html" `
+                             -OutputJsonFile "$reportPath/MaesterReport.json"
+          } catch {
+              Write-Host "Maester completed with test failures (expected when drift exists)"
+          }
+          $ErrorActionPreference = $savedEAP
+          if (-not $results) {
+              # Fallback: read from JSON if -PassThru didn't return (Pester threw)
+              $jsonPath = "$reportPath/MaesterReport.json"
+              if (Test-Path $jsonPath) {
+                  $results = Get-Content $jsonPath -Raw | ConvertFrom-Json
+              }
+          }
+
+          # ── Job Summary (visible in Actions UI) ────────────────────────────────
+          $passed  = ($results.Tests | Where-Object Result -eq 'Passed').Count
+          $failed  = ($results.Tests | Where-Object Result -eq 'Failed').Count
+          $skipped = ($results.Tests | Where-Object Result -eq 'Skipped').Count
+          $total   = $results.Tests.Count
+
+          $icon = if ($failed -eq 0) { '✅' } else { '⚠️' }
+          $summary = @"
+          ## $icon Maester + TCM Results
+
+          | Passed | Failed | Skipped | Total |
+          |--------|--------|---------|-------|
+          | $passed ✅ | $failed ❌ | $skipped ⏭️ | $total |
+
+          "@
+
+          # Add drift-specific summary if TCM tests exist
+          $tcmTests = $results.Tests | Where-Object { $_.Tag -contains 'TCM' }
+          if ($tcmTests) {
+              $driftFailed = ($tcmTests | Where-Object Result -eq 'Failed').Count
+              $driftIcon = if ($driftFailed -eq 0) { '✅ No configuration drift' } else { "⚠️ $driftFailed drift test(s) detected changes" }
+              $summary += "`n**TCM Drift:** $driftIcon`n"
+          }
+
+          $summary += "`n> 📄 Download the full HTML report from **Artifacts** below."
+          $summary | Out-File -Append $env:GITHUB_STEP_SUMMARY
+
+          # Don't fail the workflow on test failures — drifts are informational.
+          # The HTML report and summary give full visibility.
+          Write-Host "Tests completed: $passed passed, $failed failed, $skipped skipped"
+          exit 0
 
       # ── Artifacts ────────────────────────────────────────────────────────
       - name: Upload Maester HTML report

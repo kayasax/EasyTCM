@@ -69,7 +69,7 @@ param(
     [string]$FICName = "maester-devops",
     [switch]$IncludeExchange,
     [switch]$IncludeTeams,
-    [switch]$IncludeTCM,
+    [bool]$IncludeTCM = $true,
     [switch]$SkipGitHubSecrets
 )
 

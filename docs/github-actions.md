@@ -23,8 +23,10 @@ git clone https://github.com/kayasax/EasyTCM.git
 cd EasyTCM
 
 # Run the setup — auto-detects your GitHub repo from git remote
-.\scripts\New-MaesterServicePrincipal.ps1 -IncludeExchange -IncludeTeams -IncludeTCM
+.\scripts\New-MaesterServicePrincipal.ps1 -IncludeExchange -IncludeTeams
 ```
+
+> TCM permissions are included by default. Add `-IncludeTCM:$false` if you only want vanilla Maester.
 
 The script will:
 1. Create an Entra app registration ("Maester DevOps Account")

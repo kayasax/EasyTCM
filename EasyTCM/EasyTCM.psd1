@@ -7,7 +7,7 @@
     RootModule        = 'EasyTCM.psm1'
 
     # Version number of this module
-    ModuleVersion     = '0.4.2'
+    ModuleVersion     = '0.4.3'
 
     # ID used to uniquely identify this module
     GUID              = 'a3f7c8d2-5e1b-4a9f-b0c6-d8e2f1a4b5c7'

@@ -107,6 +107,9 @@ function Start-TCMMonitoring {
     # ── Step 4: Take snapshot and create baseline ───────────────────
     Write-Host ''
     Write-Host "[ 4/5 ] Taking a snapshot of your tenant ($Profile profile)..." -ForegroundColor White
+    if (-not $PSCmdlet.ShouldProcess($MonitorName, 'Create TCM monitor with baseline snapshot')) {
+        return
+    }
     $snapshotName = "Baseline $(Get-Date -Format 'yyyyMMdd HHmmss')"
     $snapshot = New-TCMSnapshot -DisplayName $snapshotName -Wait
     if (-not $snapshot -or $snapshot.status -notin @('succeeded', 'succeededWithWarnings')) {

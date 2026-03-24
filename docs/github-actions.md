@@ -20,7 +20,48 @@ Two workflows are provided in `.github/workflows/`:
 
 ---
 
-## Prerequisites
+## Quick Setup (Recommended)
+
+The [`New-MaesterServicePrincipal.ps1`](https://github.com/kayasax/EasyTCM/blob/main/scripts/New-MaesterServicePrincipal.ps1) script automates the entire setup — from 17 manual steps to one command. It creates the Entra app, grants all required Graph permissions, adds the OIDC federated credential, and sets your GitHub secrets.
+
+**Prerequisites:** [Microsoft.Graph.Authentication](https://learn.microsoft.com/powershell/microsoftgraph/installation) module + [GitHub CLI](https://cli.github.com/) (`gh auth login`).
+
+```powershell
+# Clone the repo (or download the script)
+git clone https://github.com/kayasax/EasyTCM.git
+cd EasyTCM
+
+# Run the setup — auto-detects your GitHub repo from git remote
+.\scripts\New-MaesterServicePrincipal.ps1
+
+# Include Exchange, Teams, and TCM permissions
+.\scripts\New-MaesterServicePrincipal.ps1 -IncludeExchange -IncludeTeams -IncludeTCM
+```
+
+The script will:
+1. Create an Entra app registration ("Maester DevOps Account")
+2. Grant the 19 Maester Graph permissions + admin consent
+3. Add a federated identity credential for your GitHub repo's `main` branch
+4. Set `AZURE_CLIENT_ID` and `AZURE_TENANT_ID` as GitHub secrets via `gh`
+
+After running the script, copy the workflow file to your repo and you're done:
+
+```powershell
+# Copy the workflow file to your maester-tests repo
+Copy-Item .github/workflows/maester-tcm.yml <your-maester-tests-repo>/.github/workflows/
+cd <your-maester-tests-repo>
+git add .github/workflows/maester-tcm.yml
+git commit -m "Add Maester + TCM workflow"
+git push
+```
+
+> **That's it.** The workflow runs daily at 06:00 UTC. Skip to [Phase 2: Maester + TCM](#phase-2-maester--tcm-drift-detection-workflow) to see what it does.
+
+---
+
+## Manual Setup (Alternative)
+
+If you prefer to set things up step by step, or need to customize the app registration, follow the manual instructions below.
 
 ### 1. Entra ID App Registration
 

@@ -122,6 +122,8 @@ Shows a color-coded summary: green (no drift) or yellow (drift detected) with re
 Show-TCMDrift -Report
 ```
 
+![Maester dashboard showing 314 tests with TCM drift results filtered](images/maester-dashboard-tcm.png)
+
 Generates an HTML dashboard with:
 - Monitor status and quota usage (progress bars)
 - Active drifts grouped by workload with property-level diffs
@@ -133,6 +135,8 @@ Generates an HTML dashboard with:
 ```powershell
 Show-TCMDrift -Maester
 ```
+
+![Drift detail showing 4 drifts across Entra, Exchange, and Teams](images/maester-drift-detail-4workloads.png)
 
 Syncs drift data to Maester test format and runs `Invoke-Maester`. Results appear in Maester's HTML report alongside the 400+ built-in security checks.
 

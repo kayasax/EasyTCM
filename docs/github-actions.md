@@ -182,6 +182,14 @@ maester-tests/
 
 `Invoke-Maester` then discovers those test files automatically.
 
+### What the output looks like
+
+![GitHub Actions job summary showing Maester Test Results with drift count](images/github-actions-summary.png)
+
+The Maester HTML report includes property-level drift detail:
+
+![4 drifts detected across Entra, Exchange, and Teams](images/maester-drift-detail-4workloads.png)
+
 ### Workflow failure = free alerting
 
 When drift is detected, the Pester tests fail → the workflow step fails → GitHub marks the run as failed → **GitHub's native notifications** alert all repository watchers. No extra alerting setup needed.
@@ -243,6 +251,8 @@ gh workflow run maester-tcm.yml -f compare_baseline=true
 ```
 
 > ⚠️ `-CompareBaseline` takes a fresh snapshot (counts against your daily quota). Use it no more than once per day.
+
+![Baseline drift detection — shadow CA policy detected](images/maester-baseline-drift.png)
 
 ### Property-level drift details
 

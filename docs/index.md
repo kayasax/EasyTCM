@@ -70,6 +70,8 @@ That's it. `Start-TCMMonitoring` is a guided wizard that handles everything:
 Show-TCMDrift
 ```
 
+![Drift detail showing 4 drifts across Entra, Exchange, and Teams with expected vs current values](images/maester-drift-detail-4workloads.png)
+
 ```
 🔍 Checking for configuration drift...
 
@@ -154,6 +156,8 @@ Start-TCMMonitoring -Profile Recommended
 ```
 
 ---
+
+![Maester dashboard showing 314 tests with TCM drift results](images/maester-dashboard-tcm.png)
 
 ## [Maester Integration →](maester-integration)
 

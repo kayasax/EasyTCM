@@ -30,6 +30,7 @@ TestResults/
 .env.local
 
 # Private drafts
+outreach/
 linkedin-*.md
 *-DRAFT.md
 docs/LAUNCH-KIT.md

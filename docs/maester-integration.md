@@ -101,16 +101,9 @@ maester-tests/
 
 ### What Appears in the Maester Report
 
-Each monitored resource becomes a test. Drifted resources **fail** with a markdown detail table:
+Each monitored resource becomes a test. Drifted resources **fail** with property-level detail:
 
-```
-❌ TCM Drift: conditionalaccesspolicy — Block Legacy Auth [2 drifted properties]
-
-| Property        | Baseline Value | Current Value              |
-|-----------------|----------------|----------------------------|
-| state           | enabled        | disabled                   |
-| excludeUsers    | []             | ["breakglass@contoso.com"] |
-```
+![Maester report showing 4 drifted properties across Entra, Exchange, and Teams](images/maester-drift-detail-4workloads.png)
 
 Clean resources show as **passing tests** — giving you a full inventory of what's monitored and stable.
 
@@ -177,6 +170,8 @@ Show-TCMDrift -Maester -CompareBaseline
 ```
 
 This takes a fresh snapshot (cached for 1 hour to save quota) and includes new/deleted resources in the Maester report as additional test results.
+
+![Baseline drift detection showing a new shadow Conditional Access policy](images/maester-baseline-drift.png)
 
 ---
 

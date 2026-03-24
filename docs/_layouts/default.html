@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ page.title | default: site.title }}</title>
+  <meta name="description" content="{{ page.description | default: site.description }}">
+  <link rel="stylesheet" href="{{ '/assets/css/style.css' | relative_url }}">
+  {% seo %}
+</head>
+<body>
+
+  <header class="site-header">
+    <div class="container">
+      <a href="{{ '/' | relative_url }}" class="brand">
+        <span class="brand-mark">🛡️</span>
+        <span class="brand-name">EasyTCM</span>
+      </a>
+      <button class="nav-toggle" aria-label="Toggle navigation" onclick="document.querySelector('.site-nav ul').toggleAttribute('aria-expanded')">☰ Menu</button>
+      <nav class="site-nav">
+        <ul>
+          {% for item in site.nav %}
+          <li><a href="{{ item.url }}"{% if page.url == item.url %} aria-current="page"{% endif %}>{{ item.title }}</a></li>
+          {% endfor %}
+          <li><a href="https://github.com/kayasax/EasyTCM" class="cta">GitHub ↗</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main>
+    <div class="container content">
+      {{ content }}
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="container">
+      <span>© {{ 'now' | date: "%Y" }} EasyTCM. MIT Licensed.</span>
+      <span>Built by <a href="https://github.com/kayasax">@kayasax</a> · From the creator of <a href="https://kayasax.github.io/EasyPIM/">EasyPIM</a></span>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile nav toggle
+    document.querySelector('.nav-toggle')?.addEventListener('click', function() {
+      const ul = document.querySelector('.site-nav ul');
+      const expanded = ul.getAttribute('aria-expanded') === 'true';
+      ul.setAttribute('aria-expanded', !expanded);
+    });
+  </script>
+</body>
+</html>

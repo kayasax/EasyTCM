@@ -168,15 +168,25 @@ jobs:
               $testSummaryTable += "| $($test.Name) | $badge |`n"
           }
 
-          # TCM drift callout
+          # TCM drift callout — count actual drifted properties, not test cases
+          # (each monitor is a single Pester test containing multiple drift rows)
           $driftNote = ''
           $tcmTests = $results.Tests | Where-Object { $_.Tag -contains 'TCM' }
           if ($tcmTests) {
-              $driftFailed = ($tcmTests | Where-Object Result -eq 'Failed').Count
-              if ($driftFailed -eq 0) {
+              $driftRows = 0
+              foreach ($t in $tcmTests) {
+                  $detail = if ($t.ResultDetail) {
+                      if ($t.ResultDetail -is [string]) { $t.ResultDetail }
+                      elseif ($t.ResultDetail.TestResult) { $t.ResultDetail.TestResult }
+                      else { '' }
+                  } else { '' }
+                  # Count marker rows: ⚠️ (changed), ➕ (new), ❌ (deleted)
+                  $driftRows += ([regex]::Matches($detail, '\| [⚠️➕❌]')).Count
+              }
+              if ($driftRows -eq 0) {
                   $driftNote = "`n> ✅ **TCM Drift:** No configuration drift detected`n"
               } else {
-                  $driftNote = "`n> ⚠️ **TCM Drift:** $driftFailed drift(s) detected — review the report for details`n"
+                  $driftNote = "`n> ⚠️ **TCM Drift:** $driftRows drift(s) detected — review the report for details`n"
               }
           }
 

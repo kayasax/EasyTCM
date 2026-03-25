@@ -54,12 +54,12 @@ Start-TCMMonitoring
 
 ## Step 3: Add the Workflow File
 
-Copy [`maester-tcm.yml`](https://github.com/kayasax/EasyTCM/blob/main/.github/workflows/maester-tcm.yml) to your repository:
+Copy [`maester-tcm.yml`](https://github.com/kayasax/EasyTCM/blob/main/templates/workflows/maester-tcm.yml) to your repository:
 
 ```powershell
 # From inside your maester-tests repo
 mkdir -p .github/workflows
-Copy-Item <path-to-EasyTCM>/.github/workflows/maester-tcm.yml .github/workflows/
+Copy-Item <path-to-EasyTCM>/templates/workflows/maester-tcm.yml .github/workflows/
 git add .github/workflows/maester-tcm.yml
 git commit -m "Add Maester + TCM workflow"
 git push

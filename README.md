@@ -198,12 +198,12 @@ Install-Module EasyTCM -Scope CurrentUser
 
 ## ⚙️ GitHub Actions
 
-Two ready-to-use workflows live in [`.github/workflows/`](.github/workflows/):
+Two ready-to-use workflow templates live in [`templates/workflows/`](templates/workflows/):
 
 | Workflow | What it does |
 |----------|-------------|
-| [`maester.yml`](.github/workflows/maester.yml) | **Vanilla Maester** — 400+ daily M365 security checks, HTML report artifact |
-| [`maester-tcm.yml`](.github/workflows/maester-tcm.yml) | **Maester + TCM** — security checks AND drift detection in one report |
+| [`maester.yml`](templates/workflows/maester.yml) | **Vanilla Maester** — 400+ daily M365 security checks, HTML report artifact |
+| [`maester-tcm.yml`](templates/workflows/maester-tcm.yml) | **Maester + TCM** — security checks AND drift detection in one report |
 
 ```yaml
 # Add to your repo — that's it.

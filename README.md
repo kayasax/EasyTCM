@@ -71,13 +71,9 @@ Show-TCMDrift -CompareBaseline   # also catch new/deleted resources
       ipRanges: ["10.0.0.0/8"] → ["10.0.0.0/8","192.168.0.0/16"]
 ```
 
-**HTML drift report with remediation links:**
+**Maester integration — drift as failed tests in your existing report:**
 
-![EasyTCM HTML Drift Report](docs/images/drift-report.png)
-
-**Maester integration — drift as test results:**
-
-![Maester detecting TCM drift](docs/images/maester-drift.png)
+![Maester detecting TCM drift across 4 workloads with property-level detail](docs/images/maester-drift-detail-4workloads.png)
 
 ---
 

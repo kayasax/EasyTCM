@@ -86,10 +86,6 @@ The HTML report shows property-level drift detail — exactly which property, th
 
 ![4 drifts detected across Entra, Exchange, and Teams](images/maester-drift-detail-4workloads.png)
 
-### Drift = workflow failure = free alerting
-
-When drift is detected, the Pester tests fail → GitHub marks the run as failed → **GitHub notifications** alert all repository watchers. No extra alerting setup needed.
-
 ---
 
 ## Customization

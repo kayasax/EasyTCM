@@ -111,23 +111,13 @@
         return
     }
 
-    # Expand current types to detected profile (same logic as HTML page).
-    # A Recommended monitor covers all Recommended types even if some have
-    # zero baseline resources — the HTML page checks them all.
+    # Current types — exactly what the monitor watches (no profile expansion)
     $currentTypes = [System.Collections.Generic.HashSet[string]]::new(
         [string[]]@($monitor.MonitoredTypes),
         [StringComparer]::OrdinalIgnoreCase
     )
-    $profiles = Get-TCMMonitoringProfile
-    $scSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.SecurityCritical), [StringComparer]::OrdinalIgnoreCase)
-    $recSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.Recommended), [StringComparer]::OrdinalIgnoreCase)
-    if ($currentTypes.IsSubsetOf($scSet)) {
-        foreach ($pt in $profiles.SecurityCritical) { [void]$currentTypes.Add($pt) }
-    } elseif ($currentTypes.IsSubsetOf($recSet)) {
-        foreach ($pt in $profiles.Recommended) { [void]$currentTypes.Add($pt) }
-    }
 
-    # Compute diff against expanded profile set
+    # Compute diff
     $added = @($ResourceTypes | Where-Object { -not $currentTypes.Contains($_) })
     $removed = @($currentTypes | Where-Object { -not $newTypes.Contains($_) })
 

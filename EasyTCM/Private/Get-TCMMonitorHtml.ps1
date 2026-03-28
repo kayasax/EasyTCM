@@ -45,41 +45,11 @@
         Full             = @($Catalog.Keys)
     } | ConvertTo-Json -Compress
 
-    # Detect which profile the monitor's types belong to.
-    # Strategy: find the SMALLEST profile that contains ALL baseline types.
-    # This works regardless of monitor display name.
-    $baselineSet = [System.Collections.Generic.HashSet[string]]::new(
+    # Monitored set = exactly what the monitor actually watches (no profile expansion)
+    $monitoredSet = [System.Collections.Generic.HashSet[string]]::new(
         [string[]]@($MonitoredTypes),
         [StringComparer]::OrdinalIgnoreCase
     )
-    $detectedProfileName = $ProfileLabel  # explicit label takes priority
-    if (-not $detectedProfileName -and $baselineSet.Count -gt 0) {
-        # Check smallest → largest: SecurityCritical, Recommended, Full
-        $scSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.SecurityCritical), [StringComparer]::OrdinalIgnoreCase)
-        $recSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.Recommended), [StringComparer]::OrdinalIgnoreCase)
-        if ($baselineSet.IsSubsetOf($scSet)) {
-            $detectedProfileName = 'SecurityCritical'
-        } elseif ($baselineSet.IsSubsetOf($recSet)) {
-            $detectedProfileName = 'Recommended'
-        } else {
-            # All types fit in Full by definition, but only call it Full
-            # if the user actually monitors types outside Recommended
-            $detectedProfileName = 'Full'
-        }
-    }
-
-    # Build monitored set — expand to full profile if detected.
-    # A Recommended monitor covers ALL Recommended types even if some had zero
-    # resources at snapshot time (new resources appear as baseline drift).
-    $monitoredSet = [System.Collections.Generic.HashSet[string]]::new($baselineSet, [StringComparer]::OrdinalIgnoreCase)
-    if ($detectedProfileName) {
-        $profileTypes = switch ($detectedProfileName) {
-            'SecurityCritical' { $profiles.SecurityCritical }
-            'Recommended'      { $profiles.Recommended }
-            'Full'             { @($Catalog.Keys) }
-        }
-        foreach ($pt in $profileTypes) { [void]$monitoredSet.Add($pt) }
-    }
 
     # Build workload sections HTML
     $workloadOrder = @('Entra', 'Exchange', 'Teams', 'Intune', 'SecurityAndCompliance')
@@ -183,31 +153,9 @@ $rowsHtml
 "@
     }
 
-    # Profile coverage info banner
+    # No profile detection — show count of monitored types
     $profileCoverageHtml = ''
-    if ($detectedProfileName -and $detectedProfileName -ne 'Full' -and $baselineSet.Count -gt 0) {
-        $profileTypeList = switch ($detectedProfileName) {
-            'SecurityCritical' { @($profiles.SecurityCritical) }
-            'Recommended'      { @($profiles.Recommended) }
-        }
-        $profileTotal = $profileTypeList.Count
-        $baselineHas = @($profileTypeList | Where-Object { $baselineSet.Contains($_) }).Count
-        $emptyTypes = $profileTotal - $baselineHas
-        $profileCoverageHtml = if ($emptyTypes -gt 0) {
-            "<div class='profile-note'>&#9432; Detected profile: <strong>$detectedProfileName</strong> ($profileTotal types). $emptyTypes types currently have no resources in your tenant &mdash; they are still monitored and will appear in drift reports if created.</div>"
-        } else {
-            "<div class='profile-note profile-note-ok'>&#10004; Profile: <strong>$detectedProfileName</strong> &mdash; all $profileTotal types have resources in baseline.</div>"
-        }
-    } elseif ($detectedProfileName -eq 'Full') {
-        $profileCoverageHtml = "<div class='profile-note'>&#9432; Detected profile: <strong>Full</strong> (all $($Catalog.Count) types).</div>"
-    }
-
-    # Profile badge for header
     $profileBadgeHtml = ''
-    if ($detectedProfileName) {
-        $pbClass = "pb-$($detectedProfileName.ToLower())"
-        $profileBadgeHtml = "<span class='header-profile-badge $pbClass'>$([System.Web.HttpUtility]::HtmlEncode($detectedProfileName))</span>"
-    }
 
     # Header title
     $modeLabel = if ($isEdit) { 'Edit Monitor Configuration' } else { 'Monitor Configuration' }

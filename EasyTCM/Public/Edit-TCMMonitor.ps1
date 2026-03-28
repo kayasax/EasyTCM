@@ -222,12 +222,18 @@
             return
         }
 
-        # Convert snapshot to baseline resources (PascalCase as API expects for PATCH)
-        $snapshotFull = Get-TCMSnapshot -Id $snapshotId -IncludeContent
+        # Convert snapshot content to baseline resources
+        $snapshotJob = Get-TCMSnapshot -Id $snapshotId -IncludeContent
+        $snapContent = if ($snapshotJob -is [System.Collections.IDictionary]) { $snapshotJob['snapshotContent'] } else { $snapshotJob.snapshotContent }
+        if (-not $snapContent) {
+            Write-Warning 'Snapshot succeeded but content could not be retrieved.'
+            Write-Warning 'Monitor was NOT modified — no changes applied.'
+            return
+        }
         $origWarnPref = $WarningPreference
         try {
             $WarningPreference = 'SilentlyContinue'
-            $newBaselineTemp = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp' 6>$null
+            $newBaselineTemp = ConvertTo-TCMBaseline -SnapshotContent $snapContent -Profile Full -DisplayName 'temp' 6>$null
         }
         finally { $WarningPreference = $origWarnPref }
 
@@ -291,7 +297,7 @@
     if ($DisplayName) { $updateParams.DisplayName = $DisplayName }
 
     try {
-        Update-TCMMonitor @updateParams
+        Update-TCMMonitor @updateParams -ErrorAction Stop
     }
     catch {
         Write-Warning "Failed to update monitor: $_"

@@ -65,6 +65,7 @@
         'Register-TCMSchedule'
         # Monitor Management UX
         'Show-TCMMonitor'
+        'Edit-TCMMonitor'
     )
 
     # Cmdlets to export from this module

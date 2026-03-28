@@ -36,6 +36,7 @@ Describe 'EasyTCM Module' {
             'Update-TCMBaseline'
             'Register-TCMSchedule'
             'Show-TCMMonitor'
+            'Edit-TCMMonitor'
         )
 
         $module = Get-Module EasyTCM
@@ -183,7 +184,7 @@ Describe 'Get-TCMResourceTypeCatalog' {
         $workloads = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMWorkloadResources }
         foreach ($wl in $workloads.Keys) {
             foreach ($type in $workloads[$wl]) {
-                $fullKey = "microsoft.$($wl.ToLower()).$type"
+                $fullKey = if ($type -like 'microsoft.*') { $type } else { "microsoft.$($wl.ToLower()).$type" }
                 $catalog.ContainsKey($fullKey) | Should -BeTrue -Because "$fullKey should be in catalog"
             }
         }
@@ -207,14 +208,19 @@ Describe 'Get-TCMResourceTypeCatalog' {
 }
 
 Describe 'Show-TCMMonitor' {
-    It 'should accept -Profile parameter' {
+    It 'should accept -ProfileName parameter' {
         $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
-        $cmd.Parameters.ContainsKey('Profile') | Should -BeTrue
+        $cmd.Parameters.ContainsKey('ProfileName') | Should -BeTrue
     }
 
-    It 'should validate Profile values' {
+    It 'should accept -Browser parameter' {
         $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
-        $validateSet = $cmd.Parameters['Profile'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+        $cmd.Parameters.ContainsKey('Browser') | Should -BeTrue
+    }
+
+    It 'should validate ProfileName values' {
+        $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
+        $validateSet = $cmd.Parameters['ProfileName'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
         $validateSet.ValidValues | Should -Contain 'SecurityCritical'
         $validateSet.ValidValues | Should -Contain 'Recommended'
         $validateSet.ValidValues | Should -Contain 'Full'
@@ -222,6 +228,23 @@ Describe 'Show-TCMMonitor' {
 
     It 'should display profile preview without errors' {
         { Show-TCMMonitor -ProfileName SecurityCritical } | Should -Not -Throw
+    }
+}
+
+Describe 'Edit-TCMMonitor' {
+    It 'should exist as an exported function' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM -ErrorAction SilentlyContinue
+        $cmd | Should -Not -BeNullOrEmpty
+    }
+
+    It 'should accept -ResourceTypes parameter' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('ResourceTypes') | Should -BeTrue
+    }
+
+    It 'should support ShouldProcess (WhatIf)' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
     }
 }
 

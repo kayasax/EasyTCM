@@ -48,12 +48,45 @@
 
     $catalog = Get-TCMResourceTypeCatalog
 
-    # ── Profile preview mode (no monitor needed) ──────────────────
+    # ── Browser mode (HTML view) ─────────────────────────────────
     if ($Browser) {
-        Write-Warning 'HTML browser mode will be available in a future update. Use Edit-TCMMonitor for interactive editing.'
+        if ($PSCmdlet.ParameterSetName -eq 'Profile') {
+            # Profile preview → read-only HTML with profile types pre-selected
+            $profiles = Get-TCMMonitoringProfile
+            $profileTypes = switch ($ProfileName) {
+                'SecurityCritical' { $profiles.SecurityCritical }
+                'Recommended'      { $profiles.Recommended }
+                'Full'             { @($catalog.Keys) }
+            }
+            $html = Get-TCMMonitorHtml -Catalog $catalog -MonitoredTypes $profileTypes -ProfileLabel $ProfileName -Mode ReadOnly
+        } else {
+            # Monitor mode → read-only HTML with monitor data
+            $monitors = @(Get-TCMMonitor)
+            if ($monitors.Count -eq 0) {
+                Write-Host ''
+                Write-Host '  No monitors found. Create one first:' -ForegroundColor Yellow
+                Write-Host '    Start-TCMMonitoring -Profile Recommended' -ForegroundColor Cyan
+                Write-Host ''
+                return
+            }
+            $mon = if ($MonitorId) { $monitors | Where-Object { $_.Id -eq $MonitorId } } else { $monitors[0] }
+            if (-not $mon) {
+                Write-Warning "Monitor '$MonitorId' not found. Use Get-TCMMonitor to list available monitors."
+                return
+            }
+            $html = Get-TCMMonitorHtml -Catalog $catalog -MonitorId $mon.Id -MonitorDisplayName $mon.DisplayName `
+                -MonitorStatus $mon.Status -ResourceCount $mon.ResourceCount `
+                -MonitoredTypes @($mon.MonitoredTypes) -Mode ReadOnly
+        }
+
+        $tempPath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "EasyTCM-Monitor-$(Get-Date -Format 'yyyyMMdd-HHmmss').html")
+        $html | Set-Content -Path $tempPath -Encoding utf8
+        Start-Process $tempPath
+        Write-Host "  Opened in browser: $tempPath" -ForegroundColor Green
         return
     }
 
+    # ── Profile preview mode (console) ────────────────────────────
     if ($PSCmdlet.ParameterSetName -eq 'Profile') {
         Show-TCMProfilePreview -ProfileName $ProfileName -Catalog $catalog -Detailed:$Detailed
         return

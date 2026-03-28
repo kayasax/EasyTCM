@@ -1,0 +1,231 @@
+﻿function Edit-TCMMonitor {
+    <#
+    .SYNOPSIS
+        Interactively edit what resource types your TCM monitor watches.
+    .DESCRIPTION
+        Opens an HTML page in the browser where you can select/deselect resource types
+        using checkboxes and profile presets. Click "Copy PowerShell Command" to get the
+        command that applies your changes, then paste it in your terminal.
+
+        Use -ResourceTypes for non-interactive (scripted) updates. This takes a new
+        snapshot of added types, merges into the baseline, and updates the monitor.
+
+    .PARAMETER MonitorId
+        Target monitor ID. Defaults to the first monitor found.
+    .PARAMETER ResourceTypes
+        Apply a specific set of resource types non-interactively. This:
+        1. Compares current vs new selection
+        2. Snapshots any newly added types
+        3. Merges new resources into the existing baseline
+        4. Removes resources of dropped types from the baseline
+        5. Updates the monitor with the new baseline
+    .PARAMETER DisplayName
+        Optional new display name for the monitor.
+    .EXAMPLE
+        Edit-TCMMonitor
+        # Opens interactive HTML editor in browser
+    .EXAMPLE
+        Edit-TCMMonitor -ResourceTypes @('microsoft.entra.conditionalaccesspolicy','microsoft.entra.authenticationmethodpolicy')
+        # Non-interactive update to exactly these types
+    .EXAMPLE
+        Edit-TCMMonitor -MonitorId 'eca21d95-...' -ResourceTypes (Get-TCMResourceTypeCatalog).Keys
+        # Monitor all 62 types (Full profile equivalent)
+    #>
+    [CmdletBinding(SupportsShouldProcess, DefaultParameterSetName = 'Browser')]
+    param(
+        [string]$MonitorId,
+
+        [Parameter(ParameterSetName = 'Apply', Mandatory)]
+        [string[]]$ResourceTypes,
+
+        [string]$DisplayName
+    )
+
+    # ── Get monitor ───────────────────────────────────────────────
+    $monitors = @(Get-TCMMonitor)
+    if ($monitors.Count -eq 0) {
+        Write-Host ''
+        Write-Host '  No monitors found. Create one first:' -ForegroundColor Yellow
+        Write-Host '    Start-TCMMonitoring -Profile Recommended' -ForegroundColor Cyan
+        Write-Host ''
+        return
+    }
+
+    $monitor = if ($MonitorId) {
+        $monitors | Where-Object { $_.Id -eq $MonitorId }
+    } else {
+        $monitors[0]
+    }
+
+    if (-not $monitor) {
+        Write-Warning "Monitor '$MonitorId' not found. Use Get-TCMMonitor to list available monitors."
+        return
+    }
+
+    $catalog = Get-TCMResourceTypeCatalog
+
+    # ── Browser mode (interactive HTML editor) ────────────────────
+    if ($PSCmdlet.ParameterSetName -eq 'Browser') {
+        $html = Get-TCMMonitorHtml -Catalog $catalog -MonitorId $monitor.Id `
+            -MonitorDisplayName $monitor.DisplayName -MonitorStatus $monitor.Status `
+            -ResourceCount $monitor.ResourceCount -MonitoredTypes @($monitor.MonitoredTypes) -Mode Edit
+
+        $tempPath = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "EasyTCM-Edit-$(Get-Date -Format 'yyyyMMdd-HHmmss').html")
+        $html | Set-Content -Path $tempPath -Encoding utf8
+        Start-Process $tempPath
+
+        Write-Host ''
+        Write-Host '  Opened interactive editor in browser.' -ForegroundColor Green
+        Write-Host '  Select resource types, then click "Copy PowerShell Command" and paste here.' -ForegroundColor Gray
+        Write-Host ''
+        return
+    }
+
+    # ── Apply mode (non-interactive) ──────────────────────────────
+    $currentTypes = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@($monitor.MonitoredTypes),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    $newTypes = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@($ResourceTypes),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+
+    # Validate resource types against catalog
+    $invalidTypes = @($ResourceTypes | Where-Object { -not $catalog.ContainsKey($_) })
+    if ($invalidTypes.Count -gt 0) {
+        Write-Warning "Unknown resource types (not in catalog): $($invalidTypes -join ', ')"
+        Write-Warning 'Use (Get-TCMResourceTypeCatalog).Keys to see valid types.'
+        return
+    }
+
+    # Compute diff
+    $added = @($ResourceTypes | Where-Object { -not $currentTypes.Contains($_) })
+    $removed = @($monitor.MonitoredTypes | Where-Object { -not $newTypes.Contains($_) })
+
+    if ($added.Count -eq 0 -and $removed.Count -eq 0 -and -not $DisplayName) {
+        Write-Host '  No changes detected. Monitor already matches the requested configuration.' -ForegroundColor Green
+        return
+    }
+
+    # Summary
+    Write-Host ''
+    Write-Host "  Monitor: $($monitor.DisplayName) ($($monitor.Id))" -ForegroundColor Cyan
+    Write-Host "  Current: $($currentTypes.Count) types → New: $($newTypes.Count) types" -ForegroundColor Gray
+    if ($added.Count -gt 0) {
+        Write-Host "  + Adding $($added.Count) types:" -ForegroundColor Green
+        foreach ($t in $added) {
+            $dn = if ($catalog.ContainsKey($t)) { $catalog[$t].DisplayName } else { $t }
+            Write-Host "      $dn" -ForegroundColor Green
+        }
+    }
+    if ($removed.Count -gt 0) {
+        Write-Host "  - Removing $($removed.Count) types:" -ForegroundColor Red
+        foreach ($t in $removed) {
+            $dn = if ($catalog.ContainsKey($t)) { $catalog[$t].DisplayName } else { $t }
+            Write-Host "      $dn" -ForegroundColor Red
+        }
+    }
+    Write-Host ''
+
+    if (-not $PSCmdlet.ShouldProcess("Monitor '$($monitor.DisplayName)'", "Update baseline ($($added.Count) added, $($removed.Count) removed)")) {
+        return
+    }
+
+    # ── Step 1: Snapshot added types if any ───────────────────────
+    $newResources = @()
+    if ($added.Count -gt 0) {
+        Write-Host '  Snapshotting newly added types...' -ForegroundColor Gray
+        $snapshotName = "EasyTCM-Edit-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        $snapshot = New-TCMSnapshot -DisplayName $snapshotName -Resources $added -Wait
+
+        if (-not $snapshot -or -not $snapshot.SnapshotContent) {
+            Write-Warning 'Snapshot failed or returned no content. Cannot add new types.'
+            return
+        }
+
+        # Extract resources from snapshot content for the added types
+        $content = $snapshot.SnapshotContent
+        foreach ($prop in $content.PSObject.Properties) {
+            $resourceType = $prop.Name
+            if ($newTypes.Contains($resourceType)) {
+                $items = @($prop.Value)
+                foreach ($item in $items) {
+                    $displayName = ''
+                    if ($item -is [System.Collections.IDictionary]) {
+                        $displayName = $item['displayName']
+                    } elseif ($item.PSObject.Properties['displayName']) {
+                        $displayName = $item.displayName
+                    }
+                    if ($displayName.Length -gt 128) { $displayName = $displayName.Substring(0, 128) }
+
+                    $properties = @{}
+                    $propSource = if ($item -is [System.Collections.IDictionary]) { $item.GetEnumerator() } else { $item.PSObject.Properties }
+                    foreach ($p in $propSource) {
+                        $pName = if ($p -is [System.Collections.DictionaryEntry]) { $p.Key } else { $p.Name }
+                        $pValue = if ($p -is [System.Collections.DictionaryEntry]) { $p.Value } else { $p.Value }
+                        $properties[$pName] = $pValue
+                    }
+
+                    $newResources += @{
+                        ResourceType = $resourceType
+                        DisplayName  = $displayName
+                        Properties   = $properties
+                    }
+                }
+            }
+        }
+
+        # Clean up snapshot
+        if ($snapshot.Id) {
+            Remove-TCMSnapshot -Id $snapshot.Id -ErrorAction SilentlyContinue
+        }
+
+        Write-Host "  Captured $($newResources.Count) resources from $($added.Count) new types." -ForegroundColor Gray
+    }
+
+    # ── Step 2: Build updated baseline ────────────────────────────
+    Write-Host '  Building updated baseline...' -ForegroundColor Gray
+
+    # Get current baseline resources
+    $currentBaseline = $monitor.Baseline
+    $existingResources = @()
+    if ($currentBaseline -and $currentBaseline.Resources) {
+        $existingResources = @($currentBaseline.Resources)
+    }
+
+    # Filter out removed types from existing resources
+    $keptResources = @($existingResources | Where-Object {
+        $rt = if ($_ -is [System.Collections.IDictionary]) { $_['ResourceType'] ?? $_['resourceType'] } else { $_.ResourceType ?? $_.resourceType }
+        $newTypes.Contains($rt)
+    })
+
+    # Merge kept + new resources
+    $allResources = @($keptResources) + @($newResources)
+
+    $baselineName = if ($DisplayName) { $DisplayName } else { $currentBaseline.DisplayName ?? $monitor.DisplayName }
+
+    $newBaseline = @{
+        DisplayName = $baselineName
+        Resources   = $allResources
+    }
+
+    # ── Step 3: Update monitor ────────────────────────────────────
+    Write-Host '  Updating monitor...' -ForegroundColor Gray
+
+    $updateParams = @{ Id = $monitor.Id; Baseline = $newBaseline }
+    if ($DisplayName) { $updateParams.DisplayName = $DisplayName }
+
+    Update-TCMMonitor @updateParams
+
+    $quotaEst = $allResources.Count * 4
+    Write-Host ''
+    Write-Host "  ✅ Monitor updated: $($allResources.Count) resources across $($newTypes.Count) types" -ForegroundColor Green
+    Write-Host "  Quota: ~$quotaEst / 800 resources per day ($([math]::Round($quotaEst / 800 * 100))%)" -ForegroundColor Gray
+
+    if ($removed.Count -gt 0) {
+        Write-Host '  ⚠️  Drift records for removed types will be cleared on next run.' -ForegroundColor Yellow
+    }
+
+    Write-Host ''
+}

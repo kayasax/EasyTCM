@@ -155,7 +155,12 @@
     }
     Write-Host ''
 
-    # ── Drift warning ─────────────────────────────────────────────
+    # ── Drift warning (single confirmation point) ───────────────
+    # -WhatIf: show what would happen and stop
+    if (-not $PSCmdlet.ShouldProcess("Monitor '$($monitor.DisplayName)'", "Update baseline ($($added.Count) added, $($removed.Count) removed)")) {
+        return
+    }
+    # -Force: skip interactive confirmation
     if (-not $Force) {
         $driftMsg = "This will update the baseline for '$($monitor.DisplayName)'.`n" +
                    "  - Existing drift records will be reset (re-baselined).`n" +
@@ -164,10 +169,6 @@
         if (-not $PSCmdlet.ShouldContinue($driftMsg, 'Confirm baseline update')) {
             return
         }
-    }
-
-    if (-not $PSCmdlet.ShouldProcess("Monitor '$($monitor.DisplayName)'", "Update baseline ($($added.Count) added, $($removed.Count) removed)")) {
-        return
     }
 
     # ── Step 1: Snapshot added types if any ───────────────────────
@@ -183,63 +184,37 @@
             return
         }
 
-        # Check job status
-        if ($snapshot.status -notin @('succeeded', 'partiallySuccessful')) {
-            $errDetail = if ($snapshot.errorDetails) { $snapshot.errorDetails -join '; ' } else { $snapshot.status }
+        $snapshotStatus = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['status'] } else { $snapshot.status }
+        $snapshotId = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['id'] } else { $snapshot.id }
+
+        if ($snapshotStatus -notin @('succeeded', 'partiallySuccessful')) {
+            $errDetail = if ($snapshot.errorDetails) { $snapshot.errorDetails -join '; ' } else { $snapshotStatus }
             Write-Warning "Snapshot failed ($errDetail). Cannot add new types."
-            if ($snapshot.status -eq 'quotaExceeded' -or $errDetail -match 'quota') {
+            if ($snapshotStatus -eq 'quotaExceeded' -or $errDetail -match 'quota') {
                 Write-Warning 'Daily resource quota exceeded. Wait until UTC midnight reset or reduce the number of new types.'
             }
             Write-Warning 'Monitor was NOT modified — no changes applied.'
             return
         }
 
-        # Download snapshot content from resourceLocation (no extra snapshot needed)
-        $resLocation = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['resourceLocation'] } else { $snapshot.resourceLocation }
-        $content = $null
-        if ($resLocation) {
-            try { $content = Invoke-MgGraphRequest -Method GET -Uri $resLocation }
-            catch { Write-Warning "Could not download snapshot content: $_" }
-        }
-        if (-not $content) {
-            Write-Warning 'Snapshot succeeded but content could not be retrieved. Cannot add new types.'
-            Write-Warning 'Monitor was NOT modified — no changes applied.'
-            return
-        }
-        foreach ($prop in $content.PSObject.Properties) {
-            $resourceType = $prop.Name
-            if ($newTypes.Contains($resourceType)) {
-                $items = @($prop.Value)
-                foreach ($item in $items) {
-                    $displayName = ''
-                    if ($item -is [System.Collections.IDictionary]) {
-                        $displayName = $item['displayName']
-                    } elseif ($item.PSObject.Properties['displayName']) {
-                        $displayName = $item.displayName
-                    }
-                    if ($displayName.Length -gt 128) { $displayName = $displayName.Substring(0, 128) }
+        # Fetch snapshot content and convert to baseline resources (same pattern as Add-TCMMonitorType)
+        $snapshotFull = Get-TCMSnapshot -Id $snapshotId -IncludeContent
+        $newBaseline = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp'
 
-                    $properties = @{}
-                    $propSource = if ($item -is [System.Collections.IDictionary]) { $item.GetEnumerator() } else { $item.PSObject.Properties }
-                    foreach ($p in $propSource) {
-                        $pName = if ($p -is [System.Collections.DictionaryEntry]) { $p.Key } else { $p.Name }
-                        $pValue = if ($p -is [System.Collections.DictionaryEntry]) { $p.Value } else { $p.Value }
-                        $properties[$pName] = $pValue
-                    }
-
-                    $newResources += @{
-                        ResourceType = $resourceType
-                        DisplayName  = $displayName
-                        Properties   = $properties
-                    }
-                }
-            }
+        if ($newBaseline -and $newBaseline.Resources) {
+            $newResources = @($newBaseline.Resources)
         }
 
         # Clean up snapshot
-        $snapId = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['id'] } else { $snapshot.id }
-        if ($snapId) {
-            Remove-TCMSnapshot -Id $snapId -ErrorAction SilentlyContinue
+        if ($snapshotId) {
+            Remove-TCMSnapshot -Id $snapshotId -Confirm:$false -ErrorAction SilentlyContinue
+        }
+
+        if ($newResources.Count -eq 0) {
+            Write-Warning "Snapshot succeeded but returned 0 resources for the $($added.Count) new types."
+            Write-Warning 'This may mean those resource types have no instances in your tenant.'
+            Write-Warning 'Monitor was NOT modified — no changes applied.'
+            return
         }
 
         Write-Host "  Captured $($newResources.Count) resources from $($added.Count) new types." -ForegroundColor Gray
@@ -264,6 +239,12 @@
     # Merge kept + new resources
     $allResources = @($keptResources) + @($newResources)
 
+    if ($allResources.Count -eq 0) {
+        Write-Warning 'Resulting baseline would have 0 resources — the API requires at least one.'
+        Write-Warning 'Monitor was NOT modified — no changes applied.'
+        return
+    }
+
     $baselineName = if ($DisplayName) { $DisplayName } else { $currentBaseline.DisplayName ?? $monitor.DisplayName }
 
     $newBaseline = @{
@@ -274,10 +255,17 @@
     # ── Step 3: Update monitor ────────────────────────────────────
     Write-Host '  Updating monitor...' -ForegroundColor Gray
 
-    $updateParams = @{ Id = $monitor.Id; Baseline = $newBaseline }
+    $updateParams = @{ Id = $monitor.Id; Baseline = $newBaseline; Confirm = $false }
     if ($DisplayName) { $updateParams.DisplayName = $DisplayName }
 
-    Update-TCMMonitor @updateParams
+    try {
+        Update-TCMMonitor @updateParams
+    }
+    catch {
+        Write-Warning "Failed to update monitor: $_"
+        Write-Warning 'Monitor may not have been modified. Check with Get-TCMMonitor.'
+        return
+    }
 
     $quotaEst = $allResources.Count * 4
     Write-Host ''

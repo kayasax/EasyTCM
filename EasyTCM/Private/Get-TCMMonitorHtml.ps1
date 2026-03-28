@@ -51,6 +51,22 @@
         Full             = @($Catalog.Keys)
     } | ConvertTo-Json -Compress
 
+    # Build set of types expected by the detected profile (computed later after detection)
+    # We need this early for row rendering, so detect profile now from name pattern
+    $earlyProfile = $ProfileLabel
+    if (-not $earlyProfile -and $MonitorDisplayName -match '^EasyTCM\s+(SecurityCritical|Recommended|Full)$') {
+        $earlyProfile = $Matches[1]
+    }
+    $profileExpectedSet = [System.Collections.Generic.HashSet[string]]::new([StringComparer]::OrdinalIgnoreCase)
+    if ($earlyProfile) {
+        $expectedTypes = switch ($earlyProfile) {
+            'SecurityCritical' { $profiles.SecurityCritical }
+            'Recommended'      { $profiles.Recommended }
+            'Full'             { @($Catalog.Keys) }
+        }
+        foreach ($et in $expectedTypes) { [void]$profileExpectedSet.Add($et) }
+    }
+
     # Build workload sections HTML
     $workloadOrder = @('Entra', 'Exchange', 'Teams', 'Intune', 'SecurityAndCompliance')
     $workloadNames = @{
@@ -100,10 +116,17 @@
                 $profileBadges += "<span class=`"profile-badge pb-$($p.ToLower())`">$([System.Web.HttpUtility]::HtmlEncode($p))</span>"
             }
 
+            # Determine if this type is expected by profile but missing from monitor
+            $inProfileAttr = if ($profileExpectedSet.Count -gt 0 -and $profileExpectedSet.Contains($t.Key)) { ' data-in-profile="true"' } else { '' }
+            $missingIndicator = ''
+            if (-not $isMonitored -and $profileExpectedSet.Count -gt 0 -and $profileExpectedSet.Contains($t.Key)) {
+                $missingIndicator = '<span class="missing-indicator" title="In profile but not monitored (no resources in tenant at snapshot time)">&#9888; missing</span>'
+            }
+
             if ($isEdit) {
                 $rowsHtml += @"
-          <tr class="type-row" data-type="$key" data-workload="$wl">
-            <td class="cb-cell"><input type="checkbox" class="type-cb" value="$key"$checkedAttr></td>
+          <tr class="type-row$(if (-not $isMonitored -and $profileExpectedSet.Contains($t.Key)) { ' profile-missing' })" data-type="$key" data-workload="$wl"$inProfileAttr>
+            <td class="cb-cell"><input type="checkbox" class="type-cb" value="$key"$checkedAttr> $missingIndicator</td>
             <td class="dn-cell">$dn $quotaHtml $portalHtml</td>
             <td><span class="sev-badge $severityClass">$($e.Severity)</span></td>
             <td class="profiles-cell">$profileBadges</td>
@@ -112,9 +135,16 @@
 
 "@
             } else {
-                $statusIcon = if ($isMonitored) { '<span class="icon-on">&#10004;</span>' } else { '<span class="icon-off">&#9634;</span>' }
+                $statusIcon = if ($isMonitored) {
+                    '<span class="icon-on">&#10004;</span>'
+                } elseif ($profileExpectedSet.Count -gt 0 -and $profileExpectedSet.Contains($t.Key)) {
+                    '<span class="icon-missing">&#9888;</span>'
+                } else {
+                    '<span class="icon-off">&#9634;</span>'
+                }
+                $rowClass = if ($isMonitored) { '' } elseif ($profileExpectedSet.Count -gt 0 -and $profileExpectedSet.Contains($t.Key)) { ' profile-missing' } else { ' not-monitored' }
                 $rowsHtml += @"
-          <tr class="type-row$(if (-not $isMonitored) { ' not-monitored' })" data-type="$key" data-workload="$wl">
+          <tr class="type-row$rowClass" data-type="$key" data-workload="$wl"$inProfileAttr>
             <td class="status-cell">$statusIcon</td>
             <td class="dn-cell">$dn $quotaHtml $portalHtml</td>
             <td><span class="sev-badge $severityClass">$($e.Severity)</span></td>
@@ -254,7 +284,7 @@ $rowsHtml
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body { font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; background: #f0f2f5; color: #1a1a2e; line-height: 1.6; }
-  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1rem 5rem 1rem; }
 
   /* Header */
   header { text-align: center; margin-bottom: 1.5rem; }
@@ -313,8 +343,12 @@ $rowsHtml
   .status-cell { text-align: center; }
   .icon-on { color: #27ae60; font-weight: bold; }
   .icon-off { color: #ccc; }
-  .not-monitored td { opacity: 0.5; }
-  .not-monitored:hover td { opacity: 0.8; }
+  .icon-missing { color: #f39c12; }
+  .not-monitored td { opacity: 0.45; }
+  .not-monitored:hover td { opacity: 0.75; }
+  .profile-missing { background: #fffbf0; }
+  .profile-missing td { opacity: 0.85; }
+  .missing-indicator { font-size: 0.65rem; color: #e67e22; font-weight: 600; vertical-align: middle; margin-left: 0.3rem; }
 
   /* Severity badges */
   .sev-badge { padding: 0.15rem 0.5rem; border-radius: 10px; font-size: 0.7rem; font-weight: 600; }
@@ -333,8 +367,8 @@ $rowsHtml
   .portal-link:hover { text-decoration: underline; }
   .quota-warn { color: #f39c12; margin-left: 0.3rem; cursor: help; }
 
-  /* Apply section */
-  .apply-section { display: flex; align-items: center; gap: 0.8rem; margin-top: 1.5rem; padding: 1rem; background: white; border-radius: 10px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); flex-wrap: wrap; }
+  /* Apply section — sticky at bottom */
+  .apply-section { display: flex; align-items: center; gap: 0.8rem; padding: 0.8rem 1.2rem; background: white; border-top: 2px solid #0078d4; box-shadow: 0 -2px 8px rgba(0,0,0,0.1); flex-wrap: wrap; position: sticky; bottom: 0; z-index: 100; }
   .btn { border: none; border-radius: 8px; padding: 0.6rem 1.2rem; font-size: 0.9rem; font-weight: 600; cursor: pointer; transition: all 0.15s; }
   .btn-primary { background: #0078d4; color: white; }
   .btn-primary:hover { background: #005a9e; }

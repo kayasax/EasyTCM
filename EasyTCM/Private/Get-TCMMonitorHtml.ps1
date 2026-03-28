@@ -68,11 +68,11 @@
         }
     }
 
-    # Build monitored set — expand to full profile if detected.
-    # A Recommended monitor watches ALL Recommended types even if some had zero
-    # resources at snapshot time (new resources appear as baseline drift).
+    # Build monitored set.
+    # ReadOnly mode: expand to full profile (show what the profile covers).
+    # Edit mode: only show what's actually in the baseline (no phantom checkboxes).
     $monitoredSet = [System.Collections.Generic.HashSet[string]]::new($baselineSet, [StringComparer]::OrdinalIgnoreCase)
-    if ($detectedProfileName) {
+    if ($Mode -eq 'ReadOnly' -and $detectedProfileName) {
         $profileTypes = switch ($detectedProfileName) {
             'SecurityCritical' { $profiles.SecurityCritical }
             'Recommended'      { $profiles.Recommended }

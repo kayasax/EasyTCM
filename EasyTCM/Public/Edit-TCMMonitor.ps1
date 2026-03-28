@@ -45,7 +45,20 @@
     )
 
     # ── Get monitor ───────────────────────────────────────────────
-    $monitors = @(Get-TCMMonitor)
+    $needsBaseline = ($PSCmdlet.ParameterSetName -eq 'Apply')
+    $monitors = if ($needsBaseline -and $MonitorId) {
+        # Apply mode: fetch single monitor with full baseline
+        @(Get-TCMMonitor -Id $MonitorId -IncludeBaseline)
+    } elseif ($needsBaseline) {
+        # Apply mode without ID: get list, then re-fetch first with baseline
+        $list = @(Get-TCMMonitor)
+        if ($list.Count -gt 0) {
+            @(Get-TCMMonitor -Id $list[0].Id -IncludeBaseline)
+        } else { @() }
+    } else {
+        @(Get-TCMMonitor)
+    }
+
     if ($monitors.Count -eq 0) {
         Write-Host ''
         Write-Host '  No monitors found. Create one first:' -ForegroundColor Yellow
@@ -197,12 +210,19 @@
             return
         }
 
-        # Fetch snapshot content and convert to baseline resources (same pattern as Add-TCMMonitorType)
+        # Fetch snapshot content and convert to baseline resources
         $snapshotFull = Get-TCMSnapshot -Id $snapshotId -IncludeContent
-        $newBaseline = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp'
+        # Use -Profile Full silently (we only snapshot the added types, so no filtering needed)
+        $newBaselineTemp = $null
+        $origWarnPref = $WarningPreference
+        try {
+            $WarningPreference = 'SilentlyContinue'
+            $newBaselineTemp = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp' 6>$null
+        }
+        finally { $WarningPreference = $origWarnPref }
 
-        if ($newBaseline -and $newBaseline.Resources) {
-            $newResources = @($newBaseline.Resources)
+        if ($newBaselineTemp -and $newBaselineTemp.Resources) {
+            $newResources = @($newBaselineTemp.Resources)
         }
 
         # Clean up snapshot

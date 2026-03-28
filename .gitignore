@@ -25,6 +25,9 @@ TestResults/
 # Session memory (AI tools)
 .memories/
 
+# Private plans
+.copilot/
+
 # Environment files
 .env
 .env.local

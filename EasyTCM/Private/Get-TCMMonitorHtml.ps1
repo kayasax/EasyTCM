@@ -514,14 +514,9 @@ $applySection
   window.copyCommand = function() {
     const selected = [];
     document.querySelectorAll('.type-cb:checked').forEach(function(cb) {
-      selected.push("    '" + cb.value + "'");
+      selected.push("'" + cb.value + "'");
     });
-    const ts = new Date().toISOString().replace(/\.\d{3}Z/, 'Z');
-    let cmd = '# EasyTCM Monitor Update \u2014 ' + ts + '\n';
-    cmd += '# ' + selected.length + ' types selected\n';
-    cmd += 'Edit-TCMMonitor' + (monitorId ? " -MonitorId '" + monitorId + "'" : '') + ' -ResourceTypes @(\n';
-    cmd += selected.join('\n') + '\n';
-    cmd += ')';
+    var cmd = 'Edit-TCMMonitor' + (monitorId ? " -MonitorId '" + monitorId + "'" : '') + ' -ResourceTypes @(' + selected.join(', ') + ')';
 
     navigator.clipboard.writeText(cmd).then(function() {
       const fb = document.getElementById('copyFeedback');

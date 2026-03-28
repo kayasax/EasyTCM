@@ -267,21 +267,8 @@
         $newTypes.Contains($rt)
     })
 
-    # Normalize kept resources to PascalCase (API GET returns camelCase,
-    # but PATCH expects PascalCase — same format ConvertTo-TCMBaseline produces)
-    $normalizedKept = foreach ($r in $keptResources) {
-        $rt = if ($r -is [System.Collections.IDictionary]) { $r['resourceType'] } else { $r.resourceType }
-        $dn = if ($r -is [System.Collections.IDictionary]) { $r['displayName'] } else { $r.displayName }
-        $props = if ($r -is [System.Collections.IDictionary]) { $r['properties'] } else { $r.properties }
-        @{
-            ResourceType = $rt
-            DisplayName  = $dn
-            Properties   = $props
-        }
-    }
-
-    # Merge kept + new resources (both PascalCase now)
-    $allResources = @($normalizedKept) + @($newResources)
+    # Merge kept + new resources
+    $allResources = @($keptResources) + @($newResources)
 
     if ($allResources.Count -eq 0) {
         Write-Warning 'Resulting baseline would have 0 resources — the API requires at least one.'

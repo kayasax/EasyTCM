@@ -126,6 +126,30 @@
             Write-Host "      $dn" -ForegroundColor Red
         }
     }
+    if ($added.Count -gt 0) {
+        # Quota pre-flight check
+        $quota = Get-TCMQuota -PassThru 6>$null
+        $dailyUsed = if ($quota) { $quota.DailyResourceUsage } else { 0 }
+        $dailyLimit = 800
+        $snapUsed = if ($quota) { $quota.SnapshotJobCount } else { 0 }
+        $snapLimit = 12
+
+        Write-Host ''
+        Write-Host '  ⚠️  Snapshot required for new types:' -ForegroundColor Yellow
+        Write-Host "     Daily resources: $dailyUsed / $dailyLimit used ($([math]::Round($dailyUsed / $dailyLimit * 100))%)" -ForegroundColor Gray
+        Write-Host "     Snapshot jobs:   $snapUsed / $snapLimit used" -ForegroundColor Gray
+
+        if ($snapUsed -ge $snapLimit) {
+            Write-Warning "Snapshot job limit reached ($snapUsed/$snapLimit). Cannot create snapshot for new types."
+            Write-Warning 'Wait for existing snapshot jobs to complete or expire, then retry.'
+            return
+        }
+        if ($dailyUsed -ge $dailyLimit) {
+            Write-Warning "Daily resource quota exhausted ($dailyUsed/$dailyLimit). Snapshot will likely fail."
+            Write-Warning 'Wait until tomorrow (UTC midnight reset) or reduce the number of new types.'
+            return
+        }
+    }
     Write-Host ''
 
     if (-not $PSCmdlet.ShouldProcess("Monitor '$($monitor.DisplayName)'", "Update baseline ($($added.Count) added, $($removed.Count) removed)")) {
@@ -136,7 +160,7 @@
     $newResources = @()
     if ($added.Count -gt 0) {
         Write-Host '  Snapshotting newly added types...' -ForegroundColor Gray
-        $snapshotName = "EasyTCM-Edit-$(Get-Date -Format 'yyyyMMdd-HHmmss')"
+        $snapshotName = "EasyTCM Edit $(Get-Date -Format 'yyyyMMdd HHmmss')"
         $snapshot = New-TCMSnapshot -DisplayName $snapshotName -Resources $added -Wait
 
         if (-not $snapshot -or -not $snapshot.SnapshotContent) {

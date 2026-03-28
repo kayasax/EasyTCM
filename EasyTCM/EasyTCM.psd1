@@ -63,6 +63,8 @@
         'Update-TCMBaseline'
         # Scheduling & Notifications
         'Register-TCMSchedule'
+        # Monitor Management UX
+        'Show-TCMMonitor'
     )
 
     # Cmdlets to export from this module

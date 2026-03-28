@@ -222,19 +222,15 @@
             return
         }
 
-        # Fetch snapshot content and convert to baseline resources
+        # Extract resources directly from snapshot content in API-native camelCase format
         $snapshotFull = Get-TCMSnapshot -Id $snapshotId -IncludeContent
-        # Use -Profile Full silently (we only snapshot the added types, so no filtering needed)
-        $newBaselineTemp = $null
-        $origWarnPref = $WarningPreference
-        try {
-            $WarningPreference = 'SilentlyContinue'
-            $newBaselineTemp = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp' 6>$null
-        }
-        finally { $WarningPreference = $origWarnPref }
-
-        if ($newBaselineTemp -and $newBaselineTemp.Resources) {
-            $newResources = @($newBaselineTemp.Resources)
+        $snapContent = if ($snapshotFull -is [System.Collections.IDictionary]) { $snapshotFull['snapshotContent'] } else { $snapshotFull.snapshotContent }
+        if ($snapContent) {
+            $snapResources = if ($snapContent -is [System.Collections.IDictionary]) { $snapContent['resources'] } else { $snapContent.resources }
+            if (-not $snapResources -and $snapContent.value) { $snapResources = $snapContent.value }
+            if ($snapResources) {
+                $newResources = @($snapResources)
+            }
         }
 
         # Clean up snapshot
@@ -255,16 +251,17 @@
     # ── Step 2: Build updated baseline ────────────────────────────
     Write-Host '  Building updated baseline...' -ForegroundColor Gray
 
-    # Get current baseline resources
+    # Get current baseline resources (camelCase from API)
     $currentBaseline = $monitor.Baseline
     $existingResources = @()
-    if ($currentBaseline -and $currentBaseline.Resources) {
-        $existingResources = @($currentBaseline.Resources)
+    if ($currentBaseline) {
+        $bRes = if ($currentBaseline -is [System.Collections.IDictionary]) { $currentBaseline['resources'] } else { $currentBaseline.resources }
+        if ($bRes) { $existingResources = @($bRes) }
     }
 
     # Filter out removed types from existing resources
     $keptResources = @($existingResources | Where-Object {
-        $rt = if ($_ -is [System.Collections.IDictionary]) { $_['ResourceType'] ?? $_['resourceType'] } else { $_.ResourceType ?? $_.resourceType }
+        $rt = if ($_ -is [System.Collections.IDictionary]) { $_['resourceType'] } else { $_.resourceType }
         $newTypes.Contains($rt)
     })
 
@@ -277,11 +274,13 @@
         return
     }
 
-    $baselineName = if ($DisplayName) { $DisplayName } else { $currentBaseline.DisplayName ?? $monitor.DisplayName }
+    $currentName = if ($currentBaseline -is [System.Collections.IDictionary]) { $currentBaseline['displayName'] } else { $currentBaseline.displayName }
+    $baselineName = if ($DisplayName) { $DisplayName } else { $currentName ?? $monitor.DisplayName }
 
+    # Use camelCase keys — same format the API returns
     $newBaseline = @{
-        DisplayName = $baselineName
-        Resources   = $allResources
+        displayName = $baselineName
+        resources   = $allResources
     }
 
     # ── Step 3: Update monitor ────────────────────────────────────

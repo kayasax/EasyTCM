@@ -98,10 +98,6 @@
     }
 
     # ── Apply mode (non-interactive) ──────────────────────────────
-    $currentTypes = [System.Collections.Generic.HashSet[string]]::new(
-        [string[]]@($monitor.MonitoredTypes),
-        [StringComparer]::OrdinalIgnoreCase
-    )
     $newTypes = [System.Collections.Generic.HashSet[string]]::new(
         [string[]]@($ResourceTypes),
         [StringComparer]::OrdinalIgnoreCase
@@ -115,9 +111,25 @@
         return
     }
 
-    # Compute diff
+    # Expand current types to detected profile (same logic as HTML page).
+    # A Recommended monitor covers all Recommended types even if some have
+    # zero baseline resources — the HTML page checks them all.
+    $currentTypes = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@($monitor.MonitoredTypes),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    $profiles = Get-TCMMonitoringProfile
+    $scSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.SecurityCritical), [StringComparer]::OrdinalIgnoreCase)
+    $recSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.Recommended), [StringComparer]::OrdinalIgnoreCase)
+    if ($currentTypes.IsSubsetOf($scSet)) {
+        foreach ($pt in $profiles.SecurityCritical) { [void]$currentTypes.Add($pt) }
+    } elseif ($currentTypes.IsSubsetOf($recSet)) {
+        foreach ($pt in $profiles.Recommended) { [void]$currentTypes.Add($pt) }
+    }
+
+    # Compute diff against expanded profile set
     $added = @($ResourceTypes | Where-Object { -not $currentTypes.Contains($_) })
-    $removed = @($monitor.MonitoredTypes | Where-Object { -not $newTypes.Contains($_) })
+    $removed = @($currentTypes | Where-Object { -not $newTypes.Contains($_) })
 
     if ($added.Count -eq 0 -and $removed.Count -eq 0 -and -not $DisplayName) {
         Write-Host '  No changes detected. Monitor already matches the requested configuration.' -ForegroundColor Green

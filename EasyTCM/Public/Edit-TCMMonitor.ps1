@@ -222,15 +222,17 @@
             return
         }
 
-        # Extract resources directly from snapshot content in API-native camelCase format
+        # Convert snapshot to baseline resources (PascalCase as API expects for PATCH)
         $snapshotFull = Get-TCMSnapshot -Id $snapshotId -IncludeContent
-        $snapContent = if ($snapshotFull -is [System.Collections.IDictionary]) { $snapshotFull['snapshotContent'] } else { $snapshotFull.snapshotContent }
-        if ($snapContent) {
-            $snapResources = if ($snapContent -is [System.Collections.IDictionary]) { $snapContent['resources'] } else { $snapContent.resources }
-            if (-not $snapResources -and $snapContent.value) { $snapResources = $snapContent.value }
-            if ($snapResources) {
-                $newResources = @($snapResources)
-            }
+        $origWarnPref = $WarningPreference
+        try {
+            $WarningPreference = 'SilentlyContinue'
+            $newBaselineTemp = ConvertTo-TCMBaseline -SnapshotContent $snapshotFull -Profile Full -DisplayName 'temp' 6>$null
+        }
+        finally { $WarningPreference = $origWarnPref }
+
+        if ($newBaselineTemp -and $newBaselineTemp.Resources) {
+            $newResources = @($newBaselineTemp.Resources)
         }
 
         # Clean up snapshot
@@ -251,7 +253,7 @@
     # ── Step 2: Build updated baseline ────────────────────────────
     Write-Host '  Building updated baseline...' -ForegroundColor Gray
 
-    # Get current baseline resources (camelCase from API)
+    # Get current baseline resources
     $currentBaseline = $monitor.Baseline
     $existingResources = @()
     if ($currentBaseline) {
@@ -265,8 +267,21 @@
         $newTypes.Contains($rt)
     })
 
-    # Merge kept + new resources
-    $allResources = @($keptResources) + @($newResources)
+    # Normalize kept resources to PascalCase (API GET returns camelCase,
+    # but PATCH expects PascalCase — same format ConvertTo-TCMBaseline produces)
+    $normalizedKept = foreach ($r in $keptResources) {
+        $rt = if ($r -is [System.Collections.IDictionary]) { $r['resourceType'] } else { $r.resourceType }
+        $dn = if ($r -is [System.Collections.IDictionary]) { $r['displayName'] } else { $r.displayName }
+        $props = if ($r -is [System.Collections.IDictionary]) { $r['properties'] } else { $r.properties }
+        @{
+            ResourceType = $rt
+            DisplayName  = $dn
+            Properties   = $props
+        }
+    }
+
+    # Merge kept + new resources (both PascalCase now)
+    $allResources = @($normalizedKept) + @($newResources)
 
     if ($allResources.Count -eq 0) {
         Write-Warning 'Resulting baseline would have 0 resources — the API requires at least one.'
@@ -277,10 +292,9 @@
     $currentName = if ($currentBaseline -is [System.Collections.IDictionary]) { $currentBaseline['displayName'] } else { $currentBaseline.displayName }
     $baselineName = if ($DisplayName) { $DisplayName } else { $currentName ?? $monitor.DisplayName }
 
-    # Use camelCase keys — same format the API returns
     $newBaseline = @{
-        displayName = $baselineName
-        resources   = $allResources
+        DisplayName = $baselineName
+        Resources   = $allResources
     }
 
     # ── Step 3: Update monitor ────────────────────────────────────

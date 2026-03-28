@@ -153,6 +153,36 @@ $rowsHtml
 "@
     }
 
+    # Detect profile from monitor display name (pattern: "EasyTCM <Profile>")
+    $detectedProfile = $ProfileLabel
+    if (-not $detectedProfile -and $MonitorDisplayName -match '^EasyTCM\s+(SecurityCritical|Recommended|Full)$') {
+        $detectedProfile = $Matches[1]
+    }
+
+    # Compute profile coverage (how many profile types are actually monitored)
+    $profileCoverageHtml = ''
+    if ($detectedProfile -and $detectedProfile -ne 'Full') {
+        $profileTypeList = switch ($detectedProfile) {
+            'SecurityCritical' { @($profiles.SecurityCritical) }
+            'Recommended'      { @($profiles.Recommended) }
+        }
+        $profileTotal = $profileTypeList.Count
+        $profileMonitored = @($profileTypeList | Where-Object { $monitoredSet.Contains($_) }).Count
+        $profileMissing = $profileTotal - $profileMonitored
+        $profileCoverageHtml = if ($profileMissing -gt 0) {
+            "<div class='profile-note'>&#9432; $profileMonitored of $profileTotal $detectedProfile types are monitored. $profileMissing types had no resources in your tenant at snapshot time.</div>"
+        } else {
+            "<div class='profile-note profile-note-ok'>&#10004; All $profileTotal $detectedProfile types are monitored.</div>"
+        }
+    }
+
+    # Profile badge for header
+    $profileBadgeHtml = ''
+    if ($detectedProfile) {
+        $pbClass = "pb-$($detectedProfile.ToLower())"
+        $profileBadgeHtml = "<span class='header-profile-badge $pbClass'>$([System.Web.HttpUtility]::HtmlEncode($detectedProfile))</span>"
+    }
+
     # Header title
     $modeLabel = if ($isEdit) { 'Edit Monitor Configuration' } else { 'Monitor Configuration' }
     $headerInfo = if ($MonitorDisplayName) {
@@ -231,6 +261,10 @@ $rowsHtml
   header h1 { font-size: 1.8rem; color: #1a1a2e; }
   header h1 span { color: #0078d4; }
   .subtitle { color: #666; font-size: 0.9rem; margin-top: 0.3rem; }
+  .header-profile-badge { display: inline-block; padding: 0.2rem 0.7rem; border-radius: 12px; font-size: 0.85rem; font-weight: 700; margin-left: 0.5rem; vertical-align: middle; }
+  .profile-note { background: #fff3cd; color: #856404; border: 1px solid #ffc107; border-radius: 8px; padding: 0.6rem 1rem; margin-bottom: 1.2rem; font-size: 0.85rem; }
+  .profile-note-ok { background: #d4edda; color: #155724; border-color: #28a745; }
+  .profile-match { font-size: 0.8rem; color: #666; margin-top: 0.1rem; }
 
   /* Preset bar */
   .preset-bar { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.2rem; flex-wrap: wrap; }
@@ -322,9 +356,12 @@ $rowsHtml
 <body>
 <div class="container">
   <header>
-    <h1>&#128737; <span>EasyTCM</span> $modeLabel</h1>
+    <h1>&#128737; <span>EasyTCM</span> $modeLabel $profileBadgeHtml</h1>
     <div class="subtitle">$headerInfo &mdash; $timestamp UTC</div>
+    <div class="profile-match" id="profileMatch"></div>
   </header>
+
+$profileCoverageHtml
 
 $presetButtons
 
@@ -421,6 +458,29 @@ $applySection
       quotaBar.style.width = pct + '%';
       quotaBar.style.background = pct > 80 ? '#e74c3c' : pct > 50 ? '#f39c12' : '#27ae60';
       quotaText.textContent = '~' + estResources + ' / 200 resources per run (' + pct + '%)';
+    }
+
+    // Profile match detection
+    var matchEl = document.getElementById('profileMatch');
+    if (matchEl && isEdit) {
+      var selected = new Set();
+      document.querySelectorAll('.type-cb:checked').forEach(function(cb) { selected.add(cb.value.toLowerCase()); });
+      var matchName = '';
+      ['SecurityCritical', 'Recommended', 'Full'].forEach(function(name) {
+        var pTypes = new Set((profiles[name] || []).map(function(t) { return t.toLowerCase(); }));
+        if (pTypes.size === selected.size) {
+          var match = true;
+          pTypes.forEach(function(t) { if (!selected.has(t)) match = false; });
+          if (match) matchName = name;
+        }
+      });
+      if (matchName) {
+        matchEl.textContent = 'Current selection matches: ' + matchName + ' profile';
+        matchEl.style.color = '#27ae60';
+      } else {
+        matchEl.textContent = 'Custom selection (does not match any preset profile)';
+        matchEl.style.color = '#888';
+      }
     }
   }
 

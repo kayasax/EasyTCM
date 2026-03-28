@@ -179,6 +179,7 @@
 
         if (-not $snapshot) {
             Write-Warning 'Snapshot creation failed. Cannot add new types.'
+            Write-Warning 'Monitor was NOT modified — no changes applied.'
             return
         }
 
@@ -189,18 +190,22 @@
             if ($snapshot.status -eq 'quotaExceeded' -or $errDetail -match 'quota') {
                 Write-Warning 'Daily resource quota exceeded. Wait until UTC midnight reset or reduce the number of new types.'
             }
+            Write-Warning 'Monitor was NOT modified — no changes applied.'
             return
         }
 
-        # Fetch snapshot content (the job object doesn't include it)
-        $snapshotFull = Get-TCMSnapshot -Id $snapshot.id -IncludeContent
-        if (-not $snapshotFull -or -not $snapshotFull.snapshotContent) {
+        # Download snapshot content from resourceLocation (no extra snapshot needed)
+        $resLocation = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['resourceLocation'] } else { $snapshot.resourceLocation }
+        $content = $null
+        if ($resLocation) {
+            try { $content = Invoke-MgGraphRequest -Method GET -Uri $resLocation }
+            catch { Write-Warning "Could not download snapshot content: $_" }
+        }
+        if (-not $content) {
             Write-Warning 'Snapshot succeeded but content could not be retrieved. Cannot add new types.'
+            Write-Warning 'Monitor was NOT modified — no changes applied.'
             return
         }
-
-        # Extract resources from snapshot content for the added types
-        $content = $snapshotFull.snapshotContent
         foreach ($prop in $content.PSObject.Properties) {
             $resourceType = $prop.Name
             if ($newTypes.Contains($resourceType)) {

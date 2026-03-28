@@ -37,19 +37,49 @@
     $isEdit = $Mode -eq 'Edit'
     $timestamp = [DateTime]::UtcNow.ToString('yyyy-MM-dd HH:mm:ss')
 
-    # Build monitored set for fast lookup
-    $monitoredSet = [System.Collections.Generic.HashSet[string]]::new(
-        [string[]]@($MonitoredTypes),
-        [StringComparer]::OrdinalIgnoreCase
-    )
-
-    # Get profile definitions for preset buttons
+    # Get profile definitions
     $profiles = Get-TCMMonitoringProfile
     $profileJson = @{
         SecurityCritical = @($profiles.SecurityCritical)
         Recommended      = @($profiles.Recommended)
         Full             = @($Catalog.Keys)
     } | ConvertTo-Json -Compress
+
+    # Detect which profile the monitor's types belong to.
+    # Strategy: find the SMALLEST profile that contains ALL baseline types.
+    # This works regardless of monitor display name.
+    $baselineSet = [System.Collections.Generic.HashSet[string]]::new(
+        [string[]]@($MonitoredTypes),
+        [StringComparer]::OrdinalIgnoreCase
+    )
+    $detectedProfileName = $ProfileLabel  # explicit label takes priority
+    if (-not $detectedProfileName -and $baselineSet.Count -gt 0) {
+        # Check smallest → largest: SecurityCritical, Recommended, Full
+        $scSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.SecurityCritical), [StringComparer]::OrdinalIgnoreCase)
+        $recSet = [System.Collections.Generic.HashSet[string]]::new([string[]]@($profiles.Recommended), [StringComparer]::OrdinalIgnoreCase)
+        if ($baselineSet.IsSubsetOf($scSet)) {
+            $detectedProfileName = 'SecurityCritical'
+        } elseif ($baselineSet.IsSubsetOf($recSet)) {
+            $detectedProfileName = 'Recommended'
+        } else {
+            # All types fit in Full by definition, but only call it Full
+            # if the user actually monitors types outside Recommended
+            $detectedProfileName = 'Full'
+        }
+    }
+
+    # Build monitored set — expand to full profile if detected.
+    # A Recommended monitor watches ALL Recommended types even if some had zero
+    # resources at snapshot time (new resources appear as baseline drift).
+    $monitoredSet = [System.Collections.Generic.HashSet[string]]::new($baselineSet, [StringComparer]::OrdinalIgnoreCase)
+    if ($detectedProfileName) {
+        $profileTypes = switch ($detectedProfileName) {
+            'SecurityCritical' { $profiles.SecurityCritical }
+            'Recommended'      { $profiles.Recommended }
+            'Full'             { @($Catalog.Keys) }
+        }
+        foreach ($pt in $profileTypes) { [void]$monitoredSet.Add($pt) }
+    }
 
     # Build workload sections HTML
     $workloadOrder = @('Entra', 'Exchange', 'Teams', 'Intune', 'SecurityAndCompliance')
@@ -153,34 +183,30 @@ $rowsHtml
 "@
     }
 
-    # Detect profile from monitor display name (pattern: "EasyTCM <Profile>")
-    $detectedProfile = $ProfileLabel
-    if (-not $detectedProfile -and $MonitorDisplayName -match '^EasyTCM\s+(SecurityCritical|Recommended|Full)$') {
-        $detectedProfile = $Matches[1]
-    }
-
-    # Compute profile coverage (how many profile types are actually monitored)
+    # Profile coverage info banner
     $profileCoverageHtml = ''
-    if ($detectedProfile -and $detectedProfile -ne 'Full') {
-        $profileTypeList = switch ($detectedProfile) {
+    if ($detectedProfileName -and $detectedProfileName -ne 'Full' -and $baselineSet.Count -gt 0) {
+        $profileTypeList = switch ($detectedProfileName) {
             'SecurityCritical' { @($profiles.SecurityCritical) }
             'Recommended'      { @($profiles.Recommended) }
         }
         $profileTotal = $profileTypeList.Count
-        $profileMonitored = @($profileTypeList | Where-Object { $monitoredSet.Contains($_) }).Count
-        $profileMissing = $profileTotal - $profileMonitored
-        $profileCoverageHtml = if ($profileMissing -gt 0) {
-            "<div class='profile-note'>&#9432; $profileMonitored of $profileTotal $detectedProfile types are monitored. $profileMissing types had no resources in your tenant at snapshot time.</div>"
+        $baselineHas = @($profileTypeList | Where-Object { $baselineSet.Contains($_) }).Count
+        $emptyTypes = $profileTotal - $baselineHas
+        $profileCoverageHtml = if ($emptyTypes -gt 0) {
+            "<div class='profile-note'>&#9432; Detected profile: <strong>$detectedProfileName</strong> ($profileTotal types). $emptyTypes types currently have no resources in your tenant &mdash; they are still monitored and will appear in drift reports if created.</div>"
         } else {
-            "<div class='profile-note profile-note-ok'>&#10004; All $profileTotal $detectedProfile types are monitored.</div>"
+            "<div class='profile-note profile-note-ok'>&#10004; Profile: <strong>$detectedProfileName</strong> &mdash; all $profileTotal types have resources in baseline.</div>"
         }
+    } elseif ($detectedProfileName -eq 'Full') {
+        $profileCoverageHtml = "<div class='profile-note'>&#9432; Detected profile: <strong>Full</strong> (all $($Catalog.Count) types).</div>"
     }
 
     # Profile badge for header
     $profileBadgeHtml = ''
-    if ($detectedProfile) {
-        $pbClass = "pb-$($detectedProfile.ToLower())"
-        $profileBadgeHtml = "<span class='header-profile-badge $pbClass'>$([System.Web.HttpUtility]::HtmlEncode($detectedProfile))</span>"
+    if ($detectedProfileName) {
+        $pbClass = "pb-$($detectedProfileName.ToLower())"
+        $profileBadgeHtml = "<span class='header-profile-badge $pbClass'>$([System.Web.HttpUtility]::HtmlEncode($detectedProfileName))</span>"
     }
 
     # Header title

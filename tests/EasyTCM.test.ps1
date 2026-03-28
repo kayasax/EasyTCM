@@ -246,6 +246,11 @@ Describe 'Edit-TCMMonitor' {
         $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
         $cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
     }
+
+    It 'should accept -Force parameter' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('Force') | Should -BeTrue
+    }
 }
 
 Describe 'New-TCMSnapshot defaults' {

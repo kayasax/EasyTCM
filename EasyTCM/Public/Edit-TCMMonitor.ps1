@@ -38,7 +38,10 @@
         [Parameter(ParameterSetName = 'Apply', Mandatory)]
         [string[]]$ResourceTypes,
 
-        [string]$DisplayName
+        [string]$DisplayName,
+
+        [Parameter(ParameterSetName = 'Apply')]
+        [switch]$Force
     )
 
     # ── Get monitor ───────────────────────────────────────────────
@@ -152,6 +155,17 @@
     }
     Write-Host ''
 
+    # ── Drift warning ─────────────────────────────────────────────
+    if (-not $Force) {
+        $driftMsg = "This will update the baseline for '$($monitor.DisplayName)'.`n" +
+                   "  - Existing drift records will be reset (re-baselined).`n" +
+                   "  - Types added: $($added.Count), removed: $($removed.Count).`n" +
+                   'Continue?'
+        if (-not $PSCmdlet.ShouldContinue($driftMsg, 'Confirm baseline update')) {
+            return
+        }
+    }
+
     if (-not $PSCmdlet.ShouldProcess("Monitor '$($monitor.DisplayName)'", "Update baseline ($($added.Count) added, $($removed.Count) removed)")) {
         return
     }
@@ -163,13 +177,30 @@
         $snapshotName = "EasyTCM Edit $(Get-Date -Format 'yyyyMMdd HHmmss')"
         $snapshot = New-TCMSnapshot -DisplayName $snapshotName -Resources $added -Wait
 
-        if (-not $snapshot -or -not $snapshot.SnapshotContent) {
-            Write-Warning 'Snapshot failed or returned no content. Cannot add new types.'
+        if (-not $snapshot) {
+            Write-Warning 'Snapshot creation failed. Cannot add new types.'
+            return
+        }
+
+        # Check job status
+        if ($snapshot.status -notin @('succeeded', 'partiallySuccessful')) {
+            $errDetail = if ($snapshot.errorDetails) { $snapshot.errorDetails -join '; ' } else { $snapshot.status }
+            Write-Warning "Snapshot failed ($errDetail). Cannot add new types."
+            if ($snapshot.status -eq 'quotaExceeded' -or $errDetail -match 'quota') {
+                Write-Warning 'Daily resource quota exceeded. Wait until UTC midnight reset or reduce the number of new types.'
+            }
+            return
+        }
+
+        # Fetch snapshot content (the job object doesn't include it)
+        $snapshotFull = Get-TCMSnapshot -Id $snapshot.id -IncludeContent
+        if (-not $snapshotFull -or -not $snapshotFull.snapshotContent) {
+            Write-Warning 'Snapshot succeeded but content could not be retrieved. Cannot add new types.'
             return
         }
 
         # Extract resources from snapshot content for the added types
-        $content = $snapshot.SnapshotContent
+        $content = $snapshotFull.snapshotContent
         foreach ($prop in $content.PSObject.Properties) {
             $resourceType = $prop.Name
             if ($newTypes.Contains($resourceType)) {
@@ -201,8 +232,9 @@
         }
 
         # Clean up snapshot
-        if ($snapshot.Id) {
-            Remove-TCMSnapshot -Id $snapshot.Id -ErrorAction SilentlyContinue
+        $snapId = if ($snapshot -is [System.Collections.IDictionary]) { $snapshot['id'] } else { $snapshot.id }
+        if ($snapId) {
+            Remove-TCMSnapshot -Id $snapId -ErrorAction SilentlyContinue
         }
 
         Write-Host "  Captured $($newResources.Count) resources from $($added.Count) new types." -ForegroundColor Gray

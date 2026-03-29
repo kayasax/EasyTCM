@@ -133,91 +133,39 @@ jobs:
           New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
 
           Set-Location $testsPath
-          $results = $null
-          $savedEAP = $ErrorActionPreference
-          $ErrorActionPreference = 'SilentlyContinue'
-          try {
-              $results = Invoke-Maester -NonInteractive -PassThru `
-                             -OutputHtmlFile "$reportPath/MaesterReport.html" `
-                             -OutputJsonFile "$reportPath/MaesterReport.json"
-          } catch {
-              Write-Host "Maester completed with test failures (expected when drift exists)"
+          Invoke-Maester -OutputHtmlFile "$reportPath/MaesterReport.html" `
+                         -OutputJsonFile "$reportPath/MaesterReport.json"
+
+      # ── TCM drift details (appended to Maester's native summary) ──────────
+      - name: Append TCM drift details to summary
+        if: always()
+        shell: pwsh
+        run: |
+          $jsonPath = '${{ runner.temp }}/maester-report/MaesterReport.json'
+          if (-not (Test-Path $jsonPath)) {
+              Write-Host 'No Maester JSON report found — skipping TCM summary.'
+              exit 0
           }
-          $ErrorActionPreference = $savedEAP
-          if (-not $results) {
-              # Fallback: read from JSON if -PassThru didn't return (Pester threw)
-              $jsonPath = "$reportPath/MaesterReport.json"
-              if (Test-Path $jsonPath) {
-                  $results = Get-Content $jsonPath -Raw | ConvertFrom-Json
+          $report = Get-Content $jsonPath -Raw | ConvertFrom-Json
+          $tcmTests = @($report.Tests | Where-Object { $_.Tag -contains 'TCM' })
+          if ($tcmTests.Count -eq 0) {
+              Write-Host 'No TCM tests found in report — skipping.'
+              exit 0
+          }
+
+          $md = "`n---`n`n## 🔍 TCM Drift Details (MT.1060)`n"
+          foreach ($t in $tcmTests) {
+              $icon = if ($t.Result -eq 'Passed') { '✅' } else { '⚠️' }
+              $md += "`n### $icon $($t.Title)`n`n"
+              if ($t.ResultDetail.TestDescription) {
+                  $md += "$($t.ResultDetail.TestDescription)`n`n"
+              }
+              if ($t.ResultDetail.TestResult) {
+                  $md += "$($t.ResultDetail.TestResult)`n`n"
               }
           }
 
-          # ── Job Summary (matches vanilla Maester action format) ────────────────
-          $StatusIcon = @{
-              Passed  = '<img src="https://maester.dev/img/test-result/pill-pass.png" height="25" alt="Passed"/>'
-              Failed  = '<img src="https://maester.dev/img/test-result/pill-fail.png" height="25" alt="Failed"/>'
-              NotRun  = '<img src="https://maester.dev/img/test-result/pill-notrun.png" height="25" alt="Not Run"/>'
-              Skipped = '<img src="https://maester.dev/img/test-result/pill-notrun.png" height="25" alt="Not Run"/>'
-              Error   = '<img src="https://maester.dev/img/test-result/pill-fail.png" height="25" alt="Error"/>'
-          }
-
-          $tenantName = $results.TenantName
-          $testDate   = $results.ExecutedAt
-
-          # Build test summary table (test-by-test)
-          $testSummaryTable = "|Test|Status|`n|-|:-:|`n"
-          foreach ($test in $results.Tests) {
-              $badge = $StatusIcon[$test.Result]
-              if (-not $badge) { $badge = $test.Result }
-              $testSummaryTable += "| $($test.Name) | $badge |`n"
-          }
-
-          # TCM drift callout — count actual drifted properties, not test cases
-          # (each monitor is a single Pester test containing multiple drift rows)
-          $driftNote = ''
-          $tcmTests = $results.Tests | Where-Object { $_.Tag -contains 'TCM' }
-          if ($tcmTests) {
-              $driftRows = 0
-              foreach ($t in $tcmTests) {
-                  $detail = if ($t.ResultDetail) {
-                      if ($t.ResultDetail -is [string]) { $t.ResultDetail }
-                      elseif ($t.ResultDetail.TestResult) { $t.ResultDetail.TestResult }
-                      else { '' }
-                  } else { '' }
-                  # Count marker rows: ⚠️ (changed), ➕ (new), ❌ (deleted)
-                  $driftRows += ([regex]::Matches($detail, '\| [⚠️➕❌]')).Count
-              }
-              if ($driftRows -eq 0) {
-                  $driftNote = "`n> ✅ **TCM Drift:** No configuration drift detected`n"
-              } else {
-                  $driftNote = "`n> ⚠️ **TCM Drift:** $driftRows drift(s) detected — review the report for details`n"
-              }
-          }
-
-          $summary = @"
-          # <img src="https://maester.dev/img/logo.svg" alt="Maester logo" height="40" width="40" /> Maester Test Results
-
-          **Tenant:** $tenantName
-
-          **Date:** $testDate
-
-          | 🔥 <br/> Total Tests | ✅ <br/> Passed  | ❌ <br/> Failed | ❔ <br/> Not Run |
-          |:-:|:-:|:-:|:-:|
-          | **$($results.TotalCount)** | **$($results.PassedCount)** | **$($results.FailedCount)** | **$($results.NotRunCount)** |
-          $driftNote
-          ## Test summary
-
-          $testSummaryTable
-
-          > 📄 Download the full HTML report from **Artifacts** below.
-          "@
-
-          $summary | Out-File -Append $env:GITHUB_STEP_SUMMARY
-
-          # Don't fail the workflow on test failures — drifts are informational.
-          # The HTML report and summary give full visibility.
-          Write-Host "Tests completed: $($results.PassedCount) passed, $($results.FailedCount) failed, $($results.SkippedCount) skipped"
-          exit 0
+          $md | Out-File -Append $env:GITHUB_STEP_SUMMARY
 
       # ── Artifacts ────────────────────────────────────────────────────────
       - name: Upload Maester HTML report

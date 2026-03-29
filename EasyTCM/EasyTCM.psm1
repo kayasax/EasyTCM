@@ -23,3 +23,17 @@ $script:TCM_GRAPH_SCOPES  = @(
 
 # File-based cache for Compare-TCMBaseline results (survives module reimports)
 $script:CompareBaselineCachePath = Join-Path ([System.IO.Path]::GetTempPath()) 'EasyTCM-CompareBaselineCache.json'
+
+# ── Import banner: version check + workflow tip ─────────────────────────
+try {
+    $currentVersion = (Get-Module EasyTCM -ListAvailable | Sort-Object Version -Descending | Select-Object -First 1).Version.ToString()
+    $latestVersion  = (Find-Module -Name EasyTCM -ErrorAction Stop).Version.ToString()
+
+    if ([version]$currentVersion -lt [version]$latestVersion) {
+        Write-Host "📦 EasyTCM $currentVersion → $latestVersion available. Run: " -NoNewline -ForegroundColor Yellow
+        Write-Host "Update-Module EasyTCM" -ForegroundColor Green
+    }
+} catch { Write-Verbose "Version check skipped: $_" }
+
+Write-Host "🔗 GitHub Actions workflows → " -NoNewline -ForegroundColor DarkCyan
+Write-Host "https://github.com/kayasax/EasyTCM/tree/master/templates/workflows" -ForegroundColor Cyan

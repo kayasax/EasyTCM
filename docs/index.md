@@ -126,6 +126,7 @@ Update-TCMBaseline
 │  Show-TCMDrift -Report   → HTML dashboard       │
 │  Show-TCMDrift -Maester  → Maester test suite   │
 │  Update-TCMBaseline       → Accept new state     │
+│  Edit-TCMMonitor          → Adjust what you watch │
 └─────────────────────────────────────────────────┘
 ```
 
@@ -171,12 +172,30 @@ The complete lifecycle: setup, daily checks, rebaselining, and automation.
 
 Ready-to-use workflows: vanilla Maester (Phase 1) and Maester + TCM drift detection (Phase 2) — add one file, get continuous monitoring.
 
-## [Cmdlet Reference →](https://github.com/kayasax/EasyTCM#-cmdlets--v020-15-shipped)
+## [Cmdlet Reference →](https://github.com/kayasax/EasyTCM#-all-24-cmdlets)
 
 All 19 cmdlets with examples and parameter documentation.
 
 ---
+## ✏️ Adjust What You Monitor
 
+Need to expand or narrow your monitoring coverage? The interactive editor makes it visual:
+
+```powershell
+Edit-TCMMonitor       # opens HTML editor in browser
+Show-TCMMonitor -Browser  # read-only inspection
+```
+
+![Edit-TCMMonitor interactive HTML editor with checkboxes, presets, and quota estimate](images/Edit-TCMMontior.png)
+
+Select types with checkboxes, click **Copy PowerShell Command**, paste into your terminal. EasyTCM snapshots only the new types, merges into your existing baseline, and updates the monitor — existing drift detection stays intact.
+
+```powershell
+# Or expand with a compliance template — no full rebaseline
+Add-TCMMonitorType -Template CISA-SCuBA-Exchange
+```
+
+---
 ## Get Started Now
 
 ```powershell

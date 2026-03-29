@@ -367,9 +367,11 @@ $applySection
   // Data
   const monitorId = '$monitorIdSafe';
   const profiles = $profileJson;
-  const originalTypes = new Set([$originalTypesJs]);
+  const originalTypes = new Set([$originalTypesJs].map(function(t) { return t.toLowerCase(); }));
   const isEdit = $isEditJs;
   const totalAvail = $totalAvailJs;
+  const actualResourceCount = $ResourceCount;
+  const avgPerType = originalTypes.size > 0 ? actualResourceCount / originalTypes.size : 3;
 
   // Toggle workload section
   window.toggleWorkload = function(wl) {
@@ -404,7 +406,7 @@ $applySection
   // Reset to original selection
   window.resetSelection = function() {
     document.querySelectorAll('.type-cb').forEach(function(cb) {
-      cb.checked = originalTypes.has(cb.value);
+      cb.checked = originalTypes.has(cb.value.toLowerCase());
     });
     updateCounts();
   };
@@ -423,15 +425,17 @@ $applySection
       if (countEl) countEl.textContent = sel + ' / ' + total;
     });
 
-    // Quota estimate (rough: ~3 resources per type average)
-    const estResources = checked.length * 3;
+    // Quota estimate: use actual resource count for original selection, scale for changes
+    const isOriginal = (checked.length === originalTypes.size) && Array.from(checked).every(function(cb) { return originalTypes.has(cb.value.toLowerCase()); });
+    const estResources = isOriginal ? actualResourceCount : Math.round(checked.length * avgPerType);
     const quotaBar = document.getElementById('quotaBar');
     const quotaText = document.getElementById('quotaText');
     if (quotaBar && quotaText) {
       const pct = Math.min(Math.round((estResources / 200) * 100), 100);
       quotaBar.style.width = pct + '%';
       quotaBar.style.background = pct > 80 ? '#e74c3c' : pct > 50 ? '#f39c12' : '#27ae60';
-      quotaText.textContent = '~' + estResources + ' / 200 resources per run (' + pct + '%)';
+      const prefix = isOriginal ? '' : '~';
+      quotaText.textContent = prefix + estResources + ' / 200 resources per run (' + pct + '%)';
     }
 
     // Profile match detection

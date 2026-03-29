@@ -5,6 +5,20 @@ All notable changes to EasyTCM will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-03-29
+
+### Added
+- **`Show-TCMMonitor`** — Inspect what your monitor watches: resource types grouped by workload with severity, descriptions, and admin portal links. Supports `-Detailed` for console output and `-Browser` for an interactive HTML view. Also supports `-Profile` to preview built-in profile definitions without a monitor.
+- **`Edit-TCMMonitor`** — Interactive HTML editor: select/deselect resource types with checkboxes, use profile presets (SecurityCritical / Recommended / Full), see quota estimates, then apply changes. Supports `-ResourceTypes` for non-interactive scripted updates with snapshot, baseline merge, drift warning, and quota pre-flight check.
+- **`Add-TCMMonitorType`** — Expand monitor coverage by adding resource types from built-in or custom templates without a full rebaseline. Merges new resources into the existing baseline.
+
+### Fixed
+- Quota estimate in HTML editor now uses actual resource count for the current selection instead of a rough `types × 3` heuristic
+- `Edit-TCMMonitor` apply mode: fixed snapshot content extraction (`snapshotContent` vs job object) that caused "ResourceType field is required" API errors
+- `Edit-TCMMonitor` apply mode: single confirmation instead of three (inner calls use `-Confirm:$false`)
+- `Edit-TCMMonitor` apply mode: `-ErrorAction Stop` on `Update-TCMMonitor` so API errors are caught properly
+- Removed automatic profile detection/expansion from HTML editor and diff logic — checkboxes now reflect only actually monitored types
+
 ## [0.4.3] - 2026-03-24
 
 ### Fixed

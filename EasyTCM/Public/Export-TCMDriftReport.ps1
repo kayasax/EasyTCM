@@ -1,4 +1,4 @@
-function Export-TCMDriftReport {
+﻿function Export-TCMDriftReport {
     <#
     .SYNOPSIS
         Generate an HTML drift report with admin portal deep links.
@@ -96,35 +96,11 @@ function Export-TCMDriftReport {
         }
     }
 
-    # Admin portal deep links by resource type
-    $portalLinks = @{
-        'microsoft.entra.conditionalaccesspolicy'                    = 'https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/Policies'
-        'microsoft.entra.namedlocationpolicy'                        = 'https://entra.microsoft.com/#view/Microsoft_AAD_ConditionalAccess/ConditionalAccessBlade/~/NamedLocations'
-        'microsoft.entra.authenticationmethodpolicy'                 = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AuthenticationMethodsMenuBlade/~/AdminAuthMethods'
-        'microsoft.entra.authorizationpolicy'                        = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/TenantOverview.ReactView'
-        'microsoft.entra.crosstenantaccesspolicy'                    = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/CrossTenantAccessSettings'
-        'microsoft.entra.crosstenantaccesspolicyconfigurationpartner'= 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/CrossTenantAccessSettings'
-        'microsoft.entra.roledefinition'                             = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/RolesManagementMenuBlade/~/AllRoles'
-        'microsoft.entra.administrativeunit'                         = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/AdminUnitsBlade'
-        'microsoft.entra.grouplifecyclepolicy'                       = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/GroupsManagementMenuBlade/~/Lifecycle'
-        'microsoft.entra.externalidentitypolicy'                     = 'https://entra.microsoft.com/#view/Microsoft_AAD_IAM/CompanyRelationshipsMenuBlade/~/Settings'
-        'microsoft.exchange.transportrule'                           = 'https://admin.exchange.microsoft.com/#/transportrules'
-        'microsoft.exchange.accepteddomain'                          = 'https://admin.exchange.microsoft.com/#/accepteddomains'
-        'microsoft.exchange.antiphishpolicy'                         = 'https://security.microsoft.com/antiphishing'
-        'microsoft.exchange.safeattachmentpolicy'                    = 'https://security.microsoft.com/safeattachmentv2'
-        'microsoft.exchange.safelinkspolicy'                         = 'https://security.microsoft.com/safelinksv2'
-        'microsoft.exchange.hostedcontentfilterpolicy'               = 'https://security.microsoft.com/antispam'
-        'microsoft.exchange.hostedoutboundspamfilterpolicy'          = 'https://security.microsoft.com/antispam'
-        'microsoft.exchange.organizationconfig'                      = 'https://admin.exchange.microsoft.com/#/settings'
-        'microsoft.teams.meetingpolicy'                              = 'https://admin.teams.microsoft.com/policies/meetings'
-        'microsoft.teams.messagingpolicy'                            = 'https://admin.teams.microsoft.com/policies/messaging'
-        'microsoft.teams.apppermissionpolicy'                        = 'https://admin.teams.microsoft.com/policies/app-permission'
-        'microsoft.teams.meetingconfiguration'                       = 'https://admin.teams.microsoft.com/meetings/settings'
-        'microsoft.teams.federationconfiguration'                    = 'https://admin.teams.microsoft.com/company-wide-settings/external-communications'
-        'microsoft.teams.dialinconferencingtenantsettings'           = 'https://admin.teams.microsoft.com/meetings/conference-bridges'
-        'microsoft.securityandcompliance.dlpcompliancepolicy'        = 'https://compliance.microsoft.com/datalossprevention'
-        'microsoft.securityandcompliance.retentioncompliancepolicy'  = 'https://compliance.microsoft.com/informationgovernance'
-        'microsoft.securityandcompliance.labelpolicy'                = 'https://compliance.microsoft.com/informationprotection'
+    # Admin portal deep links — single source of truth from the resource type catalog
+    $catalog = Get-TCMResourceTypeCatalog
+    $portalLinks = @{}
+    foreach ($entry in $catalog.GetEnumerator()) {
+        if ($entry.Value.AdminPortal) { $portalLinks[$entry.Key] = $entry.Value.AdminPortal }
     }
 
     # Build HTML

@@ -404,6 +404,9 @@ Sync-TCMDriftToMaester -CompareBaseline
 | `Show-TCMDrift -Maester` | Maester test results | Security workflows |
 | `Show-TCMDrift -CompareBaseline` | Find untracked resources | Weekly |
 | `Update-TCMBaseline` | Accept approved changes | After confirmed drift |
+| `Show-TCMMonitor` | Inspect monitored resource types | When needed |
+| `Edit-TCMMonitor` | Add/remove resource types visually | Adjust coverage |
+| `Add-TCMMonitorType` | Expand with template types | Compliance alignment |
 | `Get-TCMQuota` | Check API quota usage | When needed |
 | `Compare-TCMBaseline -Detailed` | Deep resource comparison | Investigation |
 

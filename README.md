@@ -165,6 +165,32 @@ Resource types: `federationconfiguration`, `meetingpolicy`, `messagingpolicy`, `
 
 ---
 
+## ✏️ Interactive Monitor Editor
+
+Need to add or remove resource types from your monitor? No need to rebuild from scratch:
+
+```powershell
+# Visual editor — opens in your browser
+Edit-TCMMonitor
+
+# Or inspect what you're monitoring
+Show-TCMMonitor -Browser
+```
+
+![Edit-TCMMonitor interactive HTML editor showing resource type checkboxes, profile presets, severity badges, and quota estimate](docs/images/Edit-TCMMontior.png)
+
+Select resource types with checkboxes, use preset buttons (SecurityCritical / Recommended / Full), then click **Copy PowerShell Command** and paste. EasyTCM handles the snapshot, baseline merge, and monitor update.
+
+```powershell
+# Non-interactive — scripted updates
+Edit-TCMMonitor -ResourceTypes @('microsoft.entra.conditionalaccesspolicy','microsoft.entra.authenticationmethodpolicy')
+
+# Expand coverage with a CISA template — no rebaselining needed
+Add-TCMMonitorType -Template CISA-SCuBA-Exchange
+```
+
+---
+
 ## 📦 Install
 
 ```powershell
@@ -216,7 +242,7 @@ See the **[full setup guide](https://kayasax.github.io/EasyTCM/github-actions)**
 
 ---
 
-## 🔧 All 20 Cmdlets
+## 🔧 All 24 Cmdlets
 
 <details>
 <summary>Click to expand the full cmdlet reference</summary>
@@ -254,6 +280,14 @@ See the **[full setup guide](https://kayasax.github.io/EasyTCM/github-actions)**
 | `Get-TCMMonitor` | List monitors with baseline summary |
 | `Update-TCMMonitor` | Update baseline (⚠️ deletes existing drifts) |
 | `Remove-TCMMonitor` | Delete a monitor |
+| `Add-TCMMonitorType` | Expand monitor coverage with templates — no full rebaseline needed |
+
+### Monitor UX (v0.5.0+)
+
+| Cmdlet | Description |
+|---|---|
+| `Show-TCMMonitor` | Inspect monitored types: console, `-Detailed`, or `-Browser` HTML view |
+| `Edit-TCMMonitor` | Interactive HTML editor or `-ResourceTypes` for scripted updates |
 
 ### Drift & Reporting
 

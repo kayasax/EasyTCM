@@ -35,6 +35,8 @@ Describe 'EasyTCM Module' {
             'Show-TCMDrift'
             'Update-TCMBaseline'
             'Register-TCMSchedule'
+            'Show-TCMMonitor'
+            'Edit-TCMMonitor'
         )
 
         $module = Get-Module EasyTCM
@@ -156,6 +158,98 @@ Describe 'Get-TCMMonitoringProfile' {
         foreach ($type in $profiles.SecurityCritical) {
             $profiles.Recommended | Should -Contain $type
         }
+    }
+}
+
+Describe 'Get-TCMResourceTypeCatalog' {
+    BeforeAll {
+        $catalog = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMResourceTypeCatalog }
+    }
+
+    It 'should return all 62 resource types' {
+        $catalog.Count | Should -Be 62
+    }
+
+    It 'should have all required keys on every entry' {
+        $requiredKeys = @('Workload', 'ShortName', 'DisplayName', 'Description', 'Severity', 'Profiles', 'AdminPortal')
+        foreach ($key in $catalog.Keys) {
+            $entry = $catalog[$key]
+            foreach ($rk in $requiredKeys) {
+                $entry.ContainsKey($rk) | Should -BeTrue -Because "$key should have key '$rk'"
+            }
+        }
+    }
+
+    It 'should cover all workloads in Get-TCMWorkloadResources' {
+        $workloads = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMWorkloadResources }
+        foreach ($wl in $workloads.Keys) {
+            foreach ($type in $workloads[$wl]) {
+                $fullKey = if ($type -like 'microsoft.*') { $type } else { "microsoft.$($wl.ToLower()).$type" }
+                $catalog.ContainsKey($fullKey) | Should -BeTrue -Because "$fullKey should be in catalog"
+            }
+        }
+    }
+
+    It 'should have profiles matching Get-TCMMonitoringProfile' {
+        $profiles = & (Get-Module EasyTCM | Select-Object -First 1) { Get-TCMMonitoringProfile }
+        foreach ($type in $profiles.SecurityCritical) {
+            $catalog[$type].Profiles | Should -Contain 'SecurityCritical' -Because "$type is SecurityCritical"
+        }
+        foreach ($type in $profiles.Recommended) {
+            $catalog[$type].Profiles | Should -Contain 'Recommended' -Because "$type is Recommended"
+        }
+    }
+
+    It 'should have valid severity values' {
+        foreach ($key in $catalog.Keys) {
+            $catalog[$key].Severity | Should -BeIn @('SHALL', 'SHOULD', 'MAY') -Because "$key severity"
+        }
+    }
+}
+
+Describe 'Show-TCMMonitor' {
+    It 'should accept -ProfileName parameter' {
+        $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('ProfileName') | Should -BeTrue
+    }
+
+    It 'should accept -Browser parameter' {
+        $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('Browser') | Should -BeTrue
+    }
+
+    It 'should validate ProfileName values' {
+        $cmd = Get-Command Show-TCMMonitor -Module EasyTCM
+        $validateSet = $cmd.Parameters['ProfileName'].Attributes | Where-Object { $_ -is [System.Management.Automation.ValidateSetAttribute] }
+        $validateSet.ValidValues | Should -Contain 'SecurityCritical'
+        $validateSet.ValidValues | Should -Contain 'Recommended'
+        $validateSet.ValidValues | Should -Contain 'Full'
+    }
+
+    It 'should display profile preview without errors' {
+        { Show-TCMMonitor -ProfileName SecurityCritical } | Should -Not -Throw
+    }
+}
+
+Describe 'Edit-TCMMonitor' {
+    It 'should exist as an exported function' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM -ErrorAction SilentlyContinue
+        $cmd | Should -Not -BeNullOrEmpty
+    }
+
+    It 'should accept -ResourceTypes parameter' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('ResourceTypes') | Should -BeTrue
+    }
+
+    It 'should support ShouldProcess (WhatIf)' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('WhatIf') | Should -BeTrue
+    }
+
+    It 'should accept -Force parameter' {
+        $cmd = Get-Command Edit-TCMMonitor -Module EasyTCM
+        $cmd.Parameters.ContainsKey('Force') | Should -BeTrue
     }
 }
 

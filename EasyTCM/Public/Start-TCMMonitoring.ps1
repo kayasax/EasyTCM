@@ -1,4 +1,4 @@
-function Start-TCMMonitoring {
+﻿function Start-TCMMonitoring {
     <#
     .SYNOPSIS
         One-command setup: from zero to monitoring in a single run.
@@ -150,6 +150,8 @@ function Start-TCMMonitoring {
     Write-Host '    Show-TCMDrift -Maester           # Maester integration' -ForegroundColor DarkGray
     Write-Host '    Update-TCMBaseline               # after approved changes' -ForegroundColor DarkGray
     Write-Host '    Compare-TCMBaseline              # find untracked resources' -ForegroundColor DarkGray
+    Write-Host '    Show-TCMMonitor                  # inspect what you monitor' -ForegroundColor DarkGray
+    Write-Host '    Edit-TCMMonitor                  # add/remove resource types' -ForegroundColor DarkGray
     Write-Host ''
 
     $monitor

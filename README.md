@@ -179,7 +179,7 @@ Show-TCMMonitor -Browser
 
 ![Edit-TCMMonitor interactive HTML editor showing resource type checkboxes, profile presets, severity badges, and quota estimate](docs/images/Edit-TCMMontior.png)
 
-Select resource types with checkboxes, use preset buttons (SecurityCritical / Recommended / Full), then click **Copy PowerShell Command** and paste. EasyTCM handles the snapshot, baseline merge, and monitor update.
+Use preset buttons (SecurityCritical / Recommended / Full) or select resource types with checkboxes, then click **Copy PowerShell Command** and paste.  EasyTCM handles the snapshot, baseline merge, and monitor update.
 
 ```powershell
 # Non-interactive — scripted updates

@@ -15,7 +15,7 @@ From the creator of [EasyPIM](https://github.com/kayasax/EasyPIM) — the same p
 
 ---
 
-## The Problem: Every M365 Tenant Drifts
+## The Problem: Every M365 Tenant Drifts {#the-problem}
 
 Someone changes a Conditional Access policy. A transport rule gets modified. A Teams federation setting shifts. An authentication method is disabled.
 
@@ -32,7 +32,7 @@ Without continuous monitoring, you're flying blind.
 
 ---
 
-## The Solution: Tenant Configuration Management (TCM)
+## The Solution: Tenant Configuration Management (TCM) {#the-solution}
 
 Microsoft shipped the [TCM APIs](https://learn.microsoft.com/en-us/graph/unified-tenant-configuration-management-concept-overview) (public preview) to solve this. TCM provides:
 
@@ -47,7 +47,7 @@ Microsoft shipped the [TCM APIs](https://learn.microsoft.com/en-us/graph/unified
 
 ---
 
-## How EasyTCM Works
+## How EasyTCM Works {#how-it-works}
 
 ### One Command to Start
 
@@ -98,8 +98,27 @@ Update-TCMBaseline
 ```
 
 ---
+## ✏️ Adjust What You Monitor {#adjust-what-you-monitor}
 
-## The Architecture
+Need to expand or narrow your monitoring coverage? The interactive editor makes it visual:
+
+```powershell
+Edit-TCMMonitor       # opens HTML editor in browser
+Show-TCMMonitor -Browser  # read-only inspection
+```
+
+![Edit-TCMMonitor interactive HTML editor with checkboxes, presets, and quota estimate](images/Edit-TCMMontior.png)
+
+Select types with checkboxes, click **Copy PowerShell Command**, paste into your terminal. EasyTCM snapshots only the new types, merges into your existing baseline, and updates the monitor — existing drift detection stays intact.
+
+```powershell
+# Or expand with a compliance template — no full rebaseline
+Add-TCMMonitorType -Template CISA-SCuBA-Exchange
+```
+
+---
+
+## The Architecture {#architecture}
 
 ```
 ┌─────────────────────────────────────────────────┐
@@ -132,7 +151,7 @@ Update-TCMBaseline
 
 ---
 
-## Why Monitoring Profiles Matter
+## Why Monitoring Profiles Matter {#monitoring-profiles}
 
 TCM has a strict quota: **800 monitored resources per day** across all monitors. Each monitor runs 4 times/day (every 6 hours), so you can realistically monitor **~200 resource instances**.
 
@@ -160,43 +179,25 @@ Start-TCMMonitoring -Profile Recommended
 
 ![Maester dashboard showing 314 tests with TCM drift results](images/maester-dashboard-tcm.png)
 
-## [Maester Integration →](maester-integration)
+## [Maester Integration →](maester-integration) {#maester-integration}
 
 Turn TCM's server-side monitoring into Maester test results — the bridge both communities have been waiting for.
 
-## [Continuous Monitoring Guide →](continuous-monitoring)
+## [Continuous Monitoring Guide →](continuous-monitoring) {#continuous-monitoring}
 
 The complete lifecycle: setup, daily checks, rebaselining, and automation.
 
-## [GitHub Actions →](github-actions)
+## [GitHub Actions →](github-actions) {#github-actions}
 
 Ready-to-use workflows: vanilla Maester (Phase 1) and Maester + TCM drift detection (Phase 2) — add one file, get continuous monitoring.
 
-## [Cmdlet Reference →](https://github.com/kayasax/EasyTCM#-all-24-cmdlets)
+## [Cmdlet Reference →](https://github.com/kayasax/EasyTCM#-all-24-cmdlets) {#cmdlet-reference}
 
-All 19 cmdlets with examples and parameter documentation.
-
----
-## ✏️ Adjust What You Monitor
-
-Need to expand or narrow your monitoring coverage? The interactive editor makes it visual:
-
-```powershell
-Edit-TCMMonitor       # opens HTML editor in browser
-Show-TCMMonitor -Browser  # read-only inspection
-```
-
-![Edit-TCMMonitor interactive HTML editor with checkboxes, presets, and quota estimate](images/Edit-TCMMontior.png)
-
-Select types with checkboxes, click **Copy PowerShell Command**, paste into your terminal. EasyTCM snapshots only the new types, merges into your existing baseline, and updates the monitor — existing drift detection stays intact.
-
-```powershell
-# Or expand with a compliance template — no full rebaseline
-Add-TCMMonitorType -Template CISA-SCuBA-Exchange
-```
+All 24 cmdlets with examples and parameter documentation.
 
 ---
-## Get Started Now
+
+## Get Started Now {#get-started-now}
 
 ```powershell
 Install-Module EasyTCM -Scope CurrentUser

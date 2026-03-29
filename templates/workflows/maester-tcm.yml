@@ -133,35 +133,85 @@ jobs:
           New-Item -ItemType Directory -Force -Path $reportPath | Out-Null
 
           Set-Location $testsPath
-          Invoke-Maester -OutputHtmlFile "$reportPath/MaesterReport.html" `
-                         -OutputJsonFile "$reportPath/MaesterReport.json"
+          # Invoke-Maester exits non-zero when tests fail (Pester terminating error).
+          # We catch this so the step succeeds — failures are visible in the report.
+          $ErrorActionPreference = 'Continue'
+          try {
+              Invoke-Maester -NonInteractive `
+                             -OutputHtmlFile "$reportPath/MaesterReport.html" `
+                             -OutputJsonFile "$reportPath/MaesterReport.json"
+          } catch {
+              Write-Host "Maester completed with test failures (expected when drift or security issues exist)"
+          }
+          # Ensure reports were generated
+          if (Test-Path "$reportPath/MaesterReport.html") {
+              Write-Host "✅ Report generated at $reportPath/MaesterReport.html"
+          } else {
+              Write-Warning "No HTML report was generated"
+          }
+          exit 0
 
-      # ── TCM drift details (appended to Maester's native summary) ──────────
-      - name: Append TCM drift details to summary
+      # ── Job Summary (Maester native format + TCM drift details) ───────────
+      - name: Generate job summary
         if: always()
         shell: pwsh
         run: |
           $jsonPath = '${{ runner.temp }}/maester-report/MaesterReport.json'
           if (-not (Test-Path $jsonPath)) {
-              Write-Host 'No Maester JSON report found — skipping TCM summary.'
+              Write-Host 'No Maester JSON report found — skipping summary.'
               exit 0
           }
           $report = Get-Content $jsonPath -Raw | ConvertFrom-Json
-          $tcmTests = @($report.Tests | Where-Object { $_.Tag -contains 'TCM' })
-          if ($tcmTests.Count -eq 0) {
-              Write-Host 'No TCM tests found in report — skipping.'
-              exit 0
+
+          # ── Maester summary (matches maester365/maester-action format) ──
+          $StatusIcon = @{
+              Passed  = '<img src="https://maester.dev/img/test-result/pill-pass.png" height="25" alt="Passed"/>'
+              Failed  = '<img src="https://maester.dev/img/test-result/pill-fail.png" height="25" alt="Failed"/>'
+              NotRun  = '<img src="https://maester.dev/img/test-result/pill-notrun.png" height="25" alt="Not Run"/>'
+              Skipped = '<img src="https://maester.dev/img/test-result/pill-notrun.png" height="25" alt="Not Run"/>'
+              Error   = '<img src="https://maester.dev/img/test-result/pill-fail.png" height="25" alt="Error"/>'
           }
 
-          $md = "`n---`n`n## 🔍 TCM Drift Details (MT.1060)`n"
-          foreach ($t in $tcmTests) {
-              $icon = if ($t.Result -eq 'Passed') { '✅' } else { '⚠️' }
-              $md += "`n### $icon $($t.Title)`n`n"
-              if ($t.ResultDetail.TestDescription) {
-                  $md += "$($t.ResultDetail.TestDescription)`n`n"
-              }
-              if ($t.ResultDetail.TestResult) {
-                  $md += "$($t.ResultDetail.TestResult)`n`n"
+          $testTable = "| Test | Status |`n|-|:-:|`n"
+          foreach ($test in $report.Tests) {
+              $badge = $StatusIcon[$test.Result]
+              if (-not $badge) { $badge = $test.Result }
+              $testTable += "| $($test.Name) | $badge |`n"
+          }
+
+          $md = @"
+          # <img src="https://maester.dev/img/logo.svg" alt="Maester logo" height="40" width="40" /> Maester Test Results
+
+          This is a summary of the test results from the Maester test run.
+
+          **Tenant:** $($report.TenantName)
+
+          **Date:** $($report.ExecutedAt)
+
+          | 🔥 <br/> Total Tests | ✅ <br/> Passed | ❌ <br/> Failed | 🔍 <br/> Investigate | ⚫ <br/> Skipped | ❔ <br/> Not Run |
+          |:-:|:-:|:-:|:-:|:-:|:-:|
+          | **$($report.TotalCount)** | **$($report.PassedCount)** | **$($report.FailedCount)** | **$($report.InvestigateCount)** | **$($report.SkippedCount)** | **$($report.NotRunCount)** |
+
+          ## Test summary
+
+          $testTable
+
+          > 📄 Download the full HTML report from **Artifacts** below.
+          "@
+
+          # ── TCM drift details (only if TCM tests exist) ──
+          $tcmTests = @($report.Tests | Where-Object { $_.Tag -contains 'TCM' })
+          if ($tcmTests.Count -gt 0) {
+              $md += "`n`n---`n`n## 🔍 TCM Drift Details (MT.1060)`n"
+              foreach ($t in $tcmTests) {
+                  $icon = if ($t.Result -eq 'Passed') { '✅' } else { '⚠️' }
+                  $md += "`n### $icon $($t.Title)`n`n"
+                  if ($t.ResultDetail.TestDescription) {
+                      $md += "$($t.ResultDetail.TestDescription)`n`n"
+                  }
+                  if ($t.ResultDetail.TestResult) {
+                      $md += "$($t.ResultDetail.TestResult)`n`n"
+                  }
               }
           }
 

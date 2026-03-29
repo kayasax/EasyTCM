@@ -193,6 +193,26 @@ body::before {
   font-weight: 600;
 }
 
+/* Heading anchor links */
+.heading-anchor {
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 0.75em;
+  margin-left: 0.4em;
+  opacity: 0;
+  transition: opacity var(--transition);
+  vertical-align: middle;
+}
+.content h2:hover .heading-anchor,
+.content h3:hover .heading-anchor,
+.heading-anchor:focus {
+  opacity: 0.7;
+}
+.heading-anchor:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .content h4 {
   font-size: 1.05rem;
   margin-top: 1.5rem;

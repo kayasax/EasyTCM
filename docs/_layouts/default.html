@@ -48,6 +48,16 @@
       const expanded = ul.getAttribute('aria-expanded') === 'true';
       ul.setAttribute('aria-expanded', !expanded);
     });
+
+    // Add visible anchor links to headings that have IDs
+    document.querySelectorAll('h2[id], h3[id]').forEach(function(heading) {
+      var link = document.createElement('a');
+      link.className = 'heading-anchor';
+      link.href = '#' + heading.id;
+      link.textContent = '#';
+      link.setAttribute('aria-label', 'Link to ' + heading.textContent.trim());
+      heading.appendChild(link);
+    });
   </script>
 </body>
 </html>

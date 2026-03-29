@@ -352,7 +352,7 @@ Then copy the workflows to your repo and trigger. The `maester-tcm.yml` workflow
 
 ### Option 4: Add Drift to an Existing Maester Pipeline
 
-If you **already** run Maester on a schedule (GitHub Actions, Azure DevOps, etc.), adding TCM drift detection takes three lines — no separate workflow needed:
+If you **already** run Maester on a schedule (GitHub Actions, Azure DevOps, etc.), adding TCM drift detection takes **one extra step** before `Invoke-Maester` — no separate workflow needed:
 
 ```powershell
 # Add before your existing Invoke-Maester call:
@@ -363,6 +363,8 @@ Sync-TCMDriftToMaester     # Materializes drift data as Pester test files
 # Your existing Maester call — drift tests are automatically discovered
 Invoke-Maester -NonInteractive -OutputHtmlFile 'MaesterReport.html'
 ```
+
+> **Pre-requisites:** Graph must already be connected with `ConfigurationMonitoring.ReadWrite.All`, and `$env:MAESTER_TESTS_PATH` must point to your Maester tests folder. For a complete GitHub Actions workflow with auth, schedule, and summary built in, use [`maester-tcm.yml`](https://github.com/kayasax/EasyTCM/blob/main/templates/workflows/maester-tcm.yml).
 
 The generated test produces a property-level diff table in the Maester HTML report:
 
@@ -388,7 +390,7 @@ Sync-TCMDriftToMaester -CompareBaseline
 | **Task Scheduler** | Single admin, jump server | Windows machine, cert auth |
 | **Azure Automation** | Production, no servers | Azure subscription, managed identity |
 | **GitHub Actions + Maester** | DevOps teams, full visibility | GitHub repo, OIDC (no secrets to rotate) |
-| **Existing Maester pipeline** | Already running Maester anywhere | `Install-Module EasyTCM` + 3 lines of code |
+| **Existing Maester pipeline** | Already running Maester anywhere | `Install-Module EasyTCM` + `Sync-TCMDriftToMaester` before `Invoke-Maester` |
 
 > **Task Scheduler and Azure Automation** require certificate-based or managed identity auth. **GitHub Actions** uses OIDC — no secrets to manage. All approaches require `ConfigurationMonitoring.ReadWrite.All` for TCM.
 
